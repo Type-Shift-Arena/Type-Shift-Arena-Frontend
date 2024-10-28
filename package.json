@@ -1,0 +1,26 @@
+{
+  "name": "typeshift-arena",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vueuse/core": "^11.1.0",
+    "axios": "^1.7.7",
+    "element-plus": "^2.8.6",
+    "pinia": "^2.2.4",
+    "sass": "^1.80.4",
+    "sockjs-client": "^1.6.1",
+    "vue": "^3.5.12",
+    "vue-router": "^4.4.5",
+    "webstomp-client": "^1.2.6"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "vite": "^5.4.9"
+  }
+}
