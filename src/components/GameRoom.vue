@@ -75,16 +75,51 @@ const fetchPlayerId = async () => {
   }
 }
 
-// 连接WebSocket
+// 添加获取房间状态的方法
+const checkRoomStatus = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/rooms/${roomId}/status`)
+    if (!response.ok) {
+      throw new Error('获取房间状态失败')
+    }
+    
+    const data = await response.json()
+    console.log('房间状态:', data)
+    
+    // 如果房间存在，设置初始玩家列表
+    if (data.players && Array.isArray(data.players)) {
+      players.value = data.players.map(String)
+      console.log('初始玩家列表:', players.value)
+    }
+    
+    return data
+  } catch (error) {
+    console.error('检查房间状态时出错:', error)
+    return null
+  }
+}
+
+// 修改连接 WebSocket 的方法
 const connectWebSocket = async () => {
   try {
-    // 确保先获取到用户ID
+    // 先获取用户ID
     if (!playerId.value) {
       await fetchPlayerId()
     }
     
     if (!playerId.value) {
       throw new Error('无法获取用户ID')
+    }
+
+    // 在连接前先检查房间状态
+    const roomStatus = await checkRoomStatus()
+    console.log('连接前房间状态:', roomStatus)
+    
+    // 如果房间已满，显示提示并返回
+    if (roomStatus && roomStatus.players && roomStatus.players.length >= 2) {
+      alert('该房间已满！')
+      router.push('/') // 返回首页或其他适当的页面
+      return
     }
 
     connectionStatus.value = '正在连接...'
@@ -129,7 +164,7 @@ const connectWebSocket = async () => {
       connectionStatus.value = '已连接'
       connectionTime.value = new Date().toLocaleTimeString()
       
-      // 订阅房间频道
+      // 先订阅房间频道
       client.subscribe(`/topic/room/${roomId}`, (message) => {
         try {
           console.log('收到消息:', message.body)
@@ -137,17 +172,14 @@ const connectWebSocket = async () => {
           
           switch (data.type) {
             case 'ROOM_INFO':
-              // 处理房间信息
               console.log('收到房间信息:', data)
-              players.value = data.players || []
-              gameStatus.value = data.gameStatus || 'waiting'
-              console.log('更新后的玩家列表:', players.value)
-              
-              // 如果房间已满且是准备状态，且自己是房主，则开始游戏
-              if (players.value.length >= 2 && gameStatus.value === 'ready' && 
-                  players.value[0] === playerId.value) {
-                setTimeout(startGame, 3000)
+              if (data.players && Array.isArray(data.players)) {
+                players.value = [...data.players].map(String)
+                console.log('从服务器获取的玩家列表:', players.value)
+                console.log('当前玩家ID:', String(playerId.value))
+                console.log('是否为房主:', String(players.value[0]) === String(playerId.value))
               }
+              gameStatus.value = data.gameStatus || 'waiting'
               break
               
             case 'PLAYER_JOIN':
@@ -192,21 +224,21 @@ const connectWebSocket = async () => {
         }
       })
 
-      // 获取房间信息
+      // 先获取房间信息
       fetchRoomInfo()
       
-      // 延迟发送加入消息
+      // 等待一段时间后再发送加入消息
       setTimeout(() => {
         console.log('发送加入房间消息')
         client.publish({
           destination: `/app/room/${roomId}/join`,
           body: JSON.stringify({
             type: 'PLAYER_JOIN',
-            playerId: playerId.value,
+            playerId: String(playerId.value),
             timestamp: new Date().toISOString()
           })
         })
-      }, 500) // 稍微延迟发送加入消息，确保先收到房间信息
+      }, 1000) // 增加延迟，确保先收到房间信息
     }
 
     client.onStompError = (frame) => {
@@ -389,47 +421,58 @@ const isRoomFull = computed(() => players.value.length >= 2)
 // 修改处理玩家加入的逻辑
 const handlePlayerJoin = (data) => {
   console.log('处理玩家加入:', data)
-  // 如果玩家不在列表中，添加玩家
-  if (!players.value.includes(data.playerId)) {
-    players.value = [...players.value, data.playerId]
-    console.log('玩家列表更新:', players.value)
+  console.log('当前玩家列表:', players.value)
+  console.log('加入的玩家ID:', data.playerId)
+  
+  // 确保 playerId 是字符串类型
+  const joinedPlayerId = String(data.playerId)
+  
+  // 只有在玩家不在列表中时才添加
+  if (!players.value.includes(joinedPlayerId)) {
+    // 不直接设置房主，而是追加到列表中
+    players.value = [...players.value, joinedPlayerId]
+    console.log('添加新玩家后的列表:', players.value)
   }
   
   // 如果房间满员，自动准备
   if (players.value.length >= 2) {
     console.log('房间满员，准备开始游戏')
     gameStatus.value = 'ready'
-    // 房主(第一个玩家)负责开始游戏
-    if (players.value[0] === playerId.value) {
+    // 只有房主才能开始游戏
+    if (isHost.value) {
       console.log('作为房主开始游戏，3秒后开始')
-      setTimeout(() => {
-        startGame()
-      }, 3000)
+      setTimeout(startGame, 3000)
     }
   }
 }
 
-// 添加房间状态管理
-const roomState = ref({
-  players: [],
-  gameStatus: 'waiting',
-  createdAt: null
+// 修改计算属性 isHost
+const isHost = computed(() => {
+  const currentPlayerId = String(playerId.value)
+  const firstPlayer = String(players.value[0])
+  console.log('房主判断:', {
+    currentPlayerId,
+    firstPlayer,
+    isHost: currentPlayerId === firstPlayer
+  })
+  return currentPlayerId === firstPlayer
 })
 
-// 添加获取房间信息的方法
+// 修改获取房间信息的方法
 const fetchRoomInfo = async () => {
   try {
     if (stompClient.value?.connected) {
+      console.log('获取房间信息，当前玩家ID:', playerId.value)
       stompClient.value.publish({
         destination: `/app/room/${roomId}/info`,
         body: JSON.stringify({
           type: 'GET_ROOM_INFO',
-          playerId: playerId.value
+          playerId: String(playerId.value)
         })
       })
     }
   } catch (error) {
-    console.error('获取房间信息失败:', error)
+    console.error('取房间信息失败:', error)
   }
 }
 
@@ -453,14 +496,19 @@ const startGame = () => {
 
 // 生命周期钩子
 onMounted(async () => {
-  console.log('组件挂载，开始连接 WebSocket')
-  if (!username.value) {
-    console.log('未找到用户名，重定向到登录页')
-    router.push('/login')
+  console.log('组件挂载，开始检查房间状态')
+  const roomStatus = await checkRoomStatus()
+  
+  if (roomStatus && roomStatus.players && roomStatus.players.length >= 2) {
+    alert('该房间已满！')
+    router.push('/')
     return
   }
-  await connectWebSocket()
+  
+  // 添加快捷键监听
   window.addEventListener('keydown', handleKeyboardShortcut)
+  // 连接 WebSocket
+  connectWebSocket()
 })
 
 
@@ -496,24 +544,37 @@ onUnmounted(() => {
 
       <!-- 状态栏 -->
       <div class="status-bar">
+        <!-- 当前玩家状态 -->
         <div class="player-stats">
-          <p>玩家数量: {{ players.length }}/2</p>
-          <p>你的ID: {{ username }}</p>
-          <p>房间状态: {{ gameStatus }}</p>
+          <div class="player-info">
+            <h3>{{ username }}</h3>
+            <div class="stats">
+              <span>WPM: {{ wpm }}</span>
+              <span>准确率: {{ accuracy }}%</span>
+              <span>错误: {{ errorCount }}</span>
+            </div>
+          </div>
           <div class="progress-bar">
             <div class="progress" :style="{ width: `${myProgress}%` }"></div>
           </div>
-
-          <div class="stats">
-            <span>WPM: {{ wpm }}</span>
-            <span>准确率: {{ accuracy }}%</span>
-            <span>错误: {{ errorCount }}</span>
-          </div>
-          
         </div>
-        <div class="vs">VS</div>
-        <div class="opponent-stats">
-          <div class="progress-bar">
+
+        <!-- VS 标志 -->
+        <div class="vs-container">
+          <div class="vs-circle">
+            <span>VS</span>
+          </div>
+        </div>
+
+        <!-- 对手状态 -->
+        <div class="player-stats opponent">
+          <div class="player-info" :class="{ 'skeleton': players.length < 2 }">
+            <h3>{{ players.length >= 2 ? '对手' : '等待加入...' }}</h3>
+            <div class="stats" v-if="players.length >= 2">
+              <span>进度: {{ opponentProgress }}%</span>
+            </div>
+          </div>
+          <div class="progress-bar" :class="{ 'skeleton': players.length < 2 }">
             <div class="progress" :style="{ width: `${opponentProgress}%` }"></div>
           </div>
         </div>
@@ -569,9 +630,18 @@ onUnmounted(() => {
           <p>连接时间: {{ connectionTime }}</p>
           <p>玩家列表: {{ players.join(', ') }}</p>
           <p>当前玩家: {{ playerId }}</p>
-          <p>是否房主: {{ players[0] === playerId }}</p>
+          <p>是否房主: {{ isHost }}</p>
           <p>游戏状态: {{ gameStatus }}</p>
           <p>WebSocket状态: {{ stompClient?.connected ? '已连接' : '未连接' }}</p>
+          <p>玩家列表详情:</p>
+          <ul>
+            <li v-for="(id, index) in players" :key="index">
+              {{ index === 0 ? '房主: ' : '玩家: ' }}{{ id }}
+              {{ id === String(playerId) ? '(你)' : '' }}
+            </li>
+          </ul>
+          <p>当前玩家ID: {{ playerId }} (类型: {{ typeof playerId }})</p>
+          <p>房主ID: {{ players[0] }} (类型: {{ typeof players[0] }})</p>
         </div>
         <div class="connection-status" :class="connectionStatus">
           {{ connectionStatus }}
@@ -604,23 +674,58 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  gap: 2rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.player-stats, .opponent-stats {
+.player-stats {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.vs {
-  padding: 0 1rem;
-  font-weight: bold;
+.player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.player-info h3 {
+  margin: 0;
+  font-size: 1.2rem;
   color: #2c3e50;
 }
 
+.vs-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vs-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #42b983;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 4px rgba(66, 185, 131, 0.2);
+}
+
 .progress-bar {
-  height: 20px;
+  height: 12px;
   background: #eee;
-  border-radius: 10px;
+  border-radius: 6px;
   overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .progress {
@@ -629,12 +734,60 @@ onUnmounted(() => {
   transition: width 0.3s ease;
 }
 
+/* 骨架屏效果 */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton h3 {
+  color: #eee !important;
+  background: #eee;
+  border-radius: 4px;
+}
+
+.skeleton .progress-bar {
+  background: #eee;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .stats {
   display: flex;
-  justify-content: space-between;
-  margin-top: 0.5rem;
+  gap: 1rem;
   font-size: 0.9rem;
   color: #666;
+}
+
+.opponent.player-stats {
+  text-align: right;
+}
+
+.opponent .stats {
+  justify-content: flex-end;
 }
 
 .game-content {
