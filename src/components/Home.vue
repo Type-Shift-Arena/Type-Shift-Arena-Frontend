@@ -1,9 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
+const testRoomId = ref('')
+const isDev = computed(() => import.meta.env.DEV)
 
 onMounted(() => {
   isLoggedIn.value = !!localStorage.getItem('token')
@@ -13,7 +15,27 @@ const startGame = () => {
   if (isLoggedIn.value) {
     router.push('/game-lobby')
   } else {
-    router.push('/login')
+    router.push('/auth')
+  }
+}
+
+const testGame = () => {
+  const roomId = Math.random().toString(36).substring(7)
+  testRoomId.value = roomId  // 保存房间ID以便复制
+  router.push({
+    name: 'testRoom',
+    params: { id: roomId }
+  })
+}
+
+const joinTestRoom = () => {
+  if (testRoomId.value) {
+    router.push({
+      name: 'testRoom',
+      params: { id: testRoomId.value }
+    })
+  } else {
+    alert('请输入房间ID')
   }
 }
 </script>
@@ -23,9 +45,14 @@ const startGame = () => {
     <div class="hero">
       <h1>在线打字对战</h1>
       <p>提升你的打字速度，挑战其他玩家！</p>
-      <button @click="startGame" class="cta-button">
-        {{ isLoggedIn ? '开始游戏' : '立即登录' }}
-      </button>
+      <div class="button-group">
+        <button @click="startGame" class="cta-button">
+          {{ isLoggedIn ? '开始游戏' : '立即登录' }}
+        </button>
+        <button @click="testGame" class="test-button">
+          测试游戏
+        </button>
+      </div>
     </div>
 
     <div class="features">
@@ -41,6 +68,12 @@ const startGame = () => {
         <h3>排行榜</h3>
         <p>查看自己在全球玩家中的排名</p>
       </div>
+    </div>
+
+    <div class="test-buttons" v-if="isDev">
+      <button @click="testGame">创建测试房间</button>
+      <button @click="joinTestRoom">加入测试房间</button>
+      <input v-model="testRoomId" placeholder="输入房间ID" />
     </div>
   </div>
 </template>
@@ -106,5 +139,40 @@ const startGame = () => {
 
 .feature p {
   color: #666;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.test-button {
+  background-color: #2c3e50;
+  color: white;
+  padding: 0.8rem 2rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.test-button:hover {
+  background-color: #34495e;
+}
+
+.test-buttons {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.test-buttons input {
+  padding: 0.5rem;
+  margin: 0 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 </style>

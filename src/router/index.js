@@ -1,8 +1,8 @@
   /*
   * @Author: hiddenSharp429 z404878860@163.com
   * @Date: 2024-10-28 19:51:51
-  * @LastEditors: hiddenSharp429 z404878860@163.com
-  * @LastEditTime: 2024-10-28 20:38:09
+ * @LastEditors: hiddenSharp429 z404878860@163.com
+ * @LastEditTime: 2024-10-29 22:38:02
   */
   import { createRouter, createWebHistory } from 'vue-router'
   import Home from '@/components/Home.vue'
@@ -23,6 +23,12 @@
           name: 'auth',
           component: () => import('@/components/Auth.vue')
         },
+        // 添加测试路由
+        {
+          path: 'test-room/:id?',
+          name: 'testRoom',
+          component: () => import('../components/GameRoom.vue')
+        }
         // {
         //   path: 'game-lobby',
         //   name: 'gameLobby',

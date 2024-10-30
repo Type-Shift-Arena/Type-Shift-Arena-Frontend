@@ -43,10 +43,12 @@ const doSignIn = async () => {
     })
     const data = await response.json()
     if (data.token) {
+      console.log(data)
       localStorage.setItem('token', data.token)
+      localStorage.setItem('userName', data.username)
       // 设置全局 axios 默认 header
       axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
-      router.push('/game-lobby')
+      router.push('/')
     } else {
       alert(data.message || '登录失败')
     }
