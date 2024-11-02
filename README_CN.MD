@@ -1,8 +1,8 @@
 <!--
  * @Author: hiddenSharp429 z404878860@163.com
- * @Date: 2024-10-28 19:44:55
+ * @Date: 2024-10-27 17:59:31
  * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-03 02:45:05
+ * @LastEditTime: 2024-11-03 02:43:33
 -->
 <div align="center">
   
@@ -30,17 +30,17 @@
 
 </div>
 
-## How to use
+## 运行应用
 
-1. CD to project root
+1. 切换到项目根目录
 ```bash
 cd /path/to/project/root
 ```
-2. Install dependencies
+2. 安装依赖
 ```bash
 npm install
 ```
-3. Run the project
+3. 运行应用
 ```bash
 npm run dev
 ```
