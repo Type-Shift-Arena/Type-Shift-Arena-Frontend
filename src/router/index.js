@@ -2,11 +2,12 @@
   * @Author: hiddenSharp429 z404878860@163.com
   * @Date: 2024-10-28 19:51:51
  * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-10-29 22:38:02
+ * @LastEditTime: 2024-11-03 10:25:51
   */
   import { createRouter, createWebHistory } from 'vue-router'
   import Home from '@/components/Home.vue'
   import Layout from '@/layouts/Layout.vue'
+  import Settings from '@/views/Settings.vue'
 
   const routes = [
     {
@@ -21,13 +22,19 @@
         {
           path: 'auth',
           name: 'auth',
-          component: () => import('@/components/Auth.vue')
+          component: () => import('../components/Auth.vue')
         },
         // 添加测试路由
         {
           path: 'test-room/:id?',
           name: 'testRoom',
           component: () => import('../components/GameRoom.vue')
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: Settings,
+          meta: { requiresAuth: true }
         }
         // {
         //   path: 'game-lobby',

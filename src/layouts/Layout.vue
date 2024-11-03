@@ -2,11 +2,12 @@
  * @Author: hiddenSharp429 z404878860@163.com
  * @Date: 2024-10-28 20:13:49
  * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-10-28 21:38:20
+ * @LastEditTime: 2024-11-03 10:26:45
 -->
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
@@ -36,6 +37,9 @@ const logout = () => {
           </template>
           <template v-else>
             <router-link to="/game-lobby">游戏大厅</router-link>
+            <router-link to="/settings" class="settings-link">
+              <span class="material-icons">settings</span>
+            </router-link>
             <a @click="logout" class="logout-btn">退出</a>
           </template>
         </div>
@@ -97,5 +101,27 @@ nav {
   position: fixed;
   bottom: 0;
   width: 100%;
+}
+
+.settings-link {
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.settings-link:hover {
+  color: #333;
+}
+
+.settings-link .material-icons {
+  font-size: 24px;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 </style>
