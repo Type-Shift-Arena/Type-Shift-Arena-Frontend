@@ -595,9 +595,10 @@ onUnmounted(() => {
             :class="{
               'correct': playerText[index] === char,
               'incorrect': playerText[index] && playerText[index] !== char,
-              'current': playerText.length === index
+              'current': playerText.length === index,
+              'space': char === ' '
             }"
-          >{{ char }}</span>
+          >{{ char === ' ' ? '␣' : char }}</span>
         </div>
 
         <!-- 输入区域 -->
@@ -1003,5 +1004,21 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.8);
   font-family: system-ui, -apple-system, sans-serif;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+.target-text span.space {
+  /* 为空格字符添加特殊样式 */
+  border-radius: 2px;
+  margin: 0 1px;
+  color: #c7c7c7;
+  font-size: 0.9em;
+}
+
+.target-text span.space.correct {
+  background-color: rgba(66, 185, 131, 0.1);
+}
+
+.target-text span.space.incorrect {
+  background-color: rgba(255, 107, 107, 0.1);
 }
 </style>
