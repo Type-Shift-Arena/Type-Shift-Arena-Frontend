@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Client } from '@stomp/stompjs'
 import { WS_URL, API_BASE_URL } from '@/config'
+import soundManager from '@/utils/SoundManager'
+
 
 const router = useRouter()
 const route = useRoute()
@@ -287,6 +289,9 @@ const sendProgress = () => {
 
 // 处理输入
 const handleInput = (event) => {
+  // 播放打字音效
+  soundManager.playTypeSound()
+
   // 计算输入延迟
   if (performanceStats.value.lastInputTime) {
     performanceStats.value.inputLatency = Date.now() - performanceStats.value.lastInputTime
