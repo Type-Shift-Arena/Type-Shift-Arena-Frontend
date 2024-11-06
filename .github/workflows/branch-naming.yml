@@ -2,6 +2,8 @@ name: Branch Naming Convention Check
 
 permissions:
   contents: write
+  pull-requests: write
+  
 
 on:
   push:
@@ -22,12 +24,10 @@ jobs:
           FEATURE_PATTERN="^feature/[a-z0-9-]+$"
           HOTFIX_PATTERN="^hotfix/[a-z0-9-]+$"
           
-          if [[ $BRANCH_NAME =~ $MAIN_BRANCHES ]] || \
-             [[ $BRANCH_NAME =~ $FEATURE_PATTERN ]] || \
-             [[ $BRANCH_NAME =~ $HOTFIX_PATTERN ]]; then
-            echo "Branch name is valid"
-            exit 0
-          else
+          if [[ ! $BRANCH_NAME =~ $MAIN_BRANCHES ]] && \
+             [[ ! $BRANCH_NAME =~ $FEATURE_PATTERN ]] && \
+             [[ ! $BRANCH_NAME =~ $HOTFIX_PATTERN ]]; then
+            echo "❌ Invalid branch name: $BRANCH_NAME"
             echo "Branch name '$BRANCH_NAME' does not follow the naming convention"
             echo "Allowed patterns:"
             echo "  - feature/*"
@@ -39,6 +39,9 @@ jobs:
               -H "Authorization: Bearer ${{ github.token }}" \
               -H "Accept: application/vnd.github.v3+json" \
               "https://api.github.com/repos/${{ github.repository }}/git/refs/heads/$BRANCH_NAME"
-              
             exit 1
+
+          else
+            echo "✅ Valid branch name: $BRANCH_NAME"
+            exit 0
           fi
