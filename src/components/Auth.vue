@@ -46,6 +46,8 @@ const doSignIn = async () => {
       console.log(data)
       localStorage.setItem('token', data.token)
       localStorage.setItem('userName', data.username)
+      localStorage.setItem('userId', data.userId)
+      localStorage.setItem('imgSrc', data.imgSrc)
       // 设置全局 axios 默认 header
       axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
       router.push('/')
