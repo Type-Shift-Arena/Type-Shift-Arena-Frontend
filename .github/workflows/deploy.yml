@@ -48,17 +48,14 @@ jobs:
         echo "Testing SSH connection..."
         sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "echo 'SSH connection successful'"
         
-        echo "Setting permissions..."
-        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "sudo chown -R $SERVER_USER:$SERVER_USER $SERVER_PATH/frontend"
-
         echo "Removing old files..."
         sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "rm -rf $SERVER_PATH/frontend/*"
         
         echo "Copying new files..."
         sshpass -p "$SSH_PASSWORD" rsync -avz -e "ssh -o StrictHostKeyChecking=no" dist/ $SERVER_USER@$SERVER_HOST:$SERVER_PATH/frontend
-    
+        
         echo "Setting final permissions..."
-        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "sudo chown -R www-data:www-data $SERVER_PATH/frontend"
-
+        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "sudo chmod -R 755 $SERVER_PATH/frontend"
+        
         echo "Running refresh script..."
-        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "cd $SERVER_PATH && ./refresh.sh"
+        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "cd $SERVER_PATH && sudo ./refresh.sh"
