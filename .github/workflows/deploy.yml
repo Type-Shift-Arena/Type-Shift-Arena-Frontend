@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: Deploy  # 指定环境
+    environment: Deploy
 
     steps:
     - name: Checkout code
@@ -17,25 +17,26 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '18'  # 更新 Node.js 版本
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org/'
 
-    - name: Configure npm to use a different registry
+    - name: Remove existing .npmrc
+      run: rm -f .npmrc || true
+
+    - name: Configure npm
       run: |
-        npm config set registry https://registry.npmjs.org/
-        npm config set @scope:registry https://registry.npmjs.org/
-        npm config set strict-ssl false
+        echo "registry=https://registry.npmjs.org/" > .npmrc
+        echo "strict-ssl=false" >> .npmrc
+        npm config list
 
     - name: Clean npm cache
       run: npm cache clean --force
 
     - name: Install dependencies
-      run: npm install
-
+      run: npm install --registry=https://registry.npmjs.org/ --no-package-lock
+      
     - name: Build project
       run: npm run build
-
-    - name: Install sshpass
-      run: sudo apt-get install -y sshpass
 
     - name: Deploy to server
       env:
@@ -44,6 +45,7 @@ jobs:
         SERVER_HOST: ${{ secrets.SERVER_HOST }}
         SERVER_PATH: ${{ secrets.SERVER_PATH }}
       run: |
+        sudo apt-get install -y sshpass
         sshpass -p "$SSH_PASSWORD" ssh $SERVER_USER@$SERVER_HOST "rm -rf $SERVER_PATH/frontend/*"
         sshpass -p "$SSH_PASSWORD" rsync -avz dist/ $SERVER_USER@$SERVER_HOST:$SERVER_PATH/frontend
         sshpass -p "$SSH_PASSWORD" ssh $SERVER_USER@$SERVER_HOST "cd $SERVER_PATH && ./refresh.sh"
