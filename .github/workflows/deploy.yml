@@ -20,7 +20,13 @@ jobs:
         node-version: '18'  # 更新 Node.js 版本
 
     - name: Configure npm to use a different registry
-      run: npm config set registry https://registry.npmjs.org/
+      run: |
+        npm config set registry https://registry.npmjs.org/
+        npm config set @scope:registry https://registry.npmjs.org/
+        npm config set strict-ssl false
+
+    - name: Clean npm cache
+      run: npm cache clean --force
 
     - name: Install dependencies
       run: npm install
