@@ -45,7 +45,15 @@ jobs:
         SERVER_HOST: ${{ secrets.SERVER_HOST }}
         SERVER_PATH: ${{ secrets.SERVER_PATH }}
       run: |
-        sudo apt-get install -y sshpass
-        sshpass -p "$SSH_PASSWORD" ssh $SERVER_USER@$SERVER_HOST "rm -rf $SERVER_PATH/frontend/*"
-        sshpass -p "$SSH_PASSWORD" rsync -avz dist/ $SERVER_USER@$SERVER_HOST:$SERVER_PATH/frontend
-        sshpass -p "$SSH_PASSWORD" ssh $SERVER_USER@$SERVER_HOST "cd $SERVER_PATH && ./refresh.sh"
+        # 添加调试信息
+        echo "Testing SSH connection..."
+        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "echo 'SSH connection successful'"
+        
+        echo "Removing old files..."
+        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "rm -rf $SERVER_PATH/frontend/*"
+        
+        echo "Copying new files..."
+        sshpass -p "$SSH_PASSWORD" rsync -avz -e "ssh -o StrictHostKeyChecking=no" dist/ $SERVER_USER@$SERVER_HOST:$SERVER_PATH/frontend
+        
+        echo "Running refresh script..."
+        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "cd $SERVER_PATH && ./refresh.sh"
