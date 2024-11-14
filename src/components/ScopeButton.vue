@@ -112,8 +112,8 @@
   onMounted(() => {
     if (props.sound) {
       sounds.value = {
-        hover: new Audio('/public/sounds/aim.mp3'),
-        click: new Audio('/public/sounds/shoot.mp3')
+        hover: new Audio('/sounds/aim.mp3'),
+        click: new Audio('/sounds/shoot.mp3')
       };
       
       // 预加载音效
