@@ -14,6 +14,8 @@
   
   <script setup>
   import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+  import { useWebSocket } from '@/composables/useWebSocket'
+  import { useRouter } from 'vue-router'
   
   const props = defineProps({
     matchingOptions: {
@@ -28,6 +30,11 @@
   const bubbleCanvas = ref(null)
   let bubbles = []
   let animationFrame = null
+  
+  const router = useRouter()
+  const { connectWebSocket, sendMatchRequest, subscribeToMatchmaking } = useWebSocket()
+  
+  let matchmakingSubscription = null
   
   // Canvas 初始化逻辑
   const initCanvas = () => {
@@ -232,8 +239,8 @@
   }
   
   // 组件挂载时初始化
-  onMounted(() => {
-    nextTick(() => {
+  onMounted(async () => {
+    nextTick(async () => {
       const cleanup = initCanvas()
       const canvas = bubbleCanvas.value
       
@@ -243,11 +250,37 @@
       createBubble()
       animateBubbles()
       
+      try {
+        // 等待 WebSocket 连接成功
+        await connectWebSocket()
+        
+        const playerId = localStorage.getItem('userId')
+        const playerName = localStorage.getItem('userName')
+
+        // 现在可以安全地订阅和发送消息
+        matchmakingSubscription = subscribeToMatchmaking(playerId)
+
+        sendMatchRequest({
+          playerId,
+          playerName,
+          language: props.matchingOptions.language,
+          category: props.matchingOptions.category,
+          difficulty: props.matchingOptions.difficulty
+        })
+      } catch (error) {
+        console.error('匹配初始化失败:', error)
+        // 可以在这里添加错误处理逻辑
+      }
+      
       onUnmounted(() => {
         cleanup?.()
         canvas.removeEventListener('click', handleCanvasClick)
         if (animationFrame) {
           cancelAnimationFrame(animationFrame)
+        }
+        // 取消匹配订阅
+        if (matchmakingSubscription) {
+          matchmakingSubscription.unsubscribe()
         }
       })
     })
