@@ -141,7 +141,6 @@ const isValid = computed(() => {
 })
 
 const startMatching = () => {
-  playClickSound()
   isMatching.value = true
 }
 
