@@ -159,6 +159,10 @@ const cancelMatching = () => {
   justify-content: center;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .lobby-content {
