@@ -2,12 +2,13 @@
   * @Author: hiddenSharp429 z404878860@163.com
   * @Date: 2024-10-28 19:51:51
  * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-03 10:25:51
+ * @LastEditTime: 2024-11-14 12:43:28
   */
   import { createRouter, createWebHistory } from 'vue-router'
   import Home from '@/components/Home.vue'
   import Layout from '@/layouts/Layout.vue'
   import Settings from '@/views/Settings.vue'
+  import GameLobby from '../views/GameLobby.vue'
 
   const routes = [
     {
@@ -35,14 +36,14 @@
           name: 'settings',
           component: Settings,
           meta: { requiresAuth: true }
-        }
-        // {
-        //   path: 'game-lobby',
-        //   name: 'gameLobby',
-        //   component: () => import('@/components/GameLobby.vue'),
-        //   meta: { requiresAuth: true }
-        // },
-        // {
+        },
+        {
+          path: 'game-lobby',
+          name: 'gameLobby',
+          component: GameLobby,
+          meta: { requiresAuth: true }
+        },
+        //{
         //   path: 'game-room/:id',
         //   name: 'gameRoom',
         //   component: () => import('@/components/GameRoom.vue'),
