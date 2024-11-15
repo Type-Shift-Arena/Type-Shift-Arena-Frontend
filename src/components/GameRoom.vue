@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Client } from '@stomp/stompjs'
 import { WS_URL, API_BASE_URL } from '@/config'
+import soundManager from '@/utils/SoundManager'
+
 
 const router = useRouter()
 const route = useRoute()
@@ -15,6 +17,13 @@ const playerText = ref('')
 const targetText = ref('The quick brown fox jumps over the lazy dog.') // 测试用文本
 const myProgress = ref(0)
 const opponentProgress = ref(0)
+const opponentStats = ref({
+  playerName: '未知玩家',
+  wpm: 0,
+  accuracy: 100,
+  errorCount: 0,
+  username: ''
+})
 
 // 游戏统计
 const startTime = ref(null)
@@ -49,36 +58,22 @@ const isMac = computed(() => {
 
 // 修改玩家状态相关代码
 const username = ref(localStorage.getItem('userName'))
-const playerId = ref(null)
-
-// 添加获取用户ID的方法
-const fetchPlayerId = async () => {
-  try {
-    if (!username.value) {
-      console.error('未找到用户名')
-      router.push('/login') // 如果没有用户名，重定向到登录页
-      return
-    }
-    
-    const response = await fetch(`${API_BASE_URL}/users/username/${username.value}`)
-    if (!response.ok) {
-      throw new Error('获取用户ID失败')
-    }
-    
-    const data = await response.json()
-    playerId.value = data.id
-    localStorage.setItem('userId', playerId.value) // 缓存用户ID
-    console.log('获取到用户ID:', playerId.value)
-  } catch (error) {
-    console.error('获取用户ID时出错:', error)
-    router.push('/login') // 出错时重定向到登录页
-  }
-}
+const playerId = ref(localStorage.getItem('userId'))
 
 // 添加获取房间状态的方法
 const checkRoomStatus = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/rooms/${roomId}/status`)
+    // 如果是 404，说明房间不存在，作为第一个玩家加入
+    if (response.status === 404) {
+      players.value = [] // 清空玩家列表
+      return {
+        exists: false,
+        players: []
+      }
+    }
+
+    // 其他错误
     if (!response.ok) {
       throw new Error('获取房间状态失败')
     }
@@ -87,26 +82,34 @@ const checkRoomStatus = async () => {
     console.log('房间状态:', data)
     
     // 如果房间存在，设置初始玩家列表
-    if (data.players && Array.isArray(data.players)) {
-      players.value = data.players.map(String)
-      console.log('初始玩家列表:', players.value)
+    if (data) {
+      console.log('设置初始玩家列表:', data.playersName)
+      
+      // 设置玩家列表
+      players.value = [...data.playersId].map(String)
+
+      //设置对手名字
+      opponentStats.value = {
+        playerName: data.playersName[0] || '未知玩家'
+      }
     }
     
-    return data
+    return {
+      exists: true,
+      ...data
+    }
   } catch (error) {
     console.error('检查房间状态时出错:', error)
-    return null
+    return {
+      exists: false,
+      players: []
+    }
   }
 }
 
 // 修改连接 WebSocket 的方法
 const connectWebSocket = async () => {
-  try {
-    // 先获取用户ID
-    if (!playerId.value) {
-      await fetchPlayerId()
-    }
-    
+  try {    
     if (!playerId.value) {
       throw new Error('无法获取用户ID')
     }
@@ -115,10 +118,10 @@ const connectWebSocket = async () => {
     const roomStatus = await checkRoomStatus()
     console.log('连接前房间状态:', roomStatus)
     
-    // 如果房间已满，显示提示并返回
-    if (roomStatus && roomStatus.players && roomStatus.players.length >= 2) {
+    // 只在房间已存在且满员时阻止加入
+    if (roomStatus.exists && roomStatus.players && roomStatus.players.length >= 2) {
       alert('该房间已满！')
-      router.push('/') // 返回首页或其他适当的页面
+      router.push('/') 
       return
     }
 
@@ -178,6 +181,17 @@ const connectWebSocket = async () => {
                 console.log('从服务器获取的玩家列表:', players.value)
                 console.log('当前玩家ID:', String(playerId.value))
                 console.log('是否为房主:', String(players.value[0]) === String(playerId.value))
+
+                // 更新对手信息
+                if (data.playerDetails) {
+                  const opponent = data.playerDetails.find(p => String(p.playerId) !== String(playerId.value))
+                  if (opponent) {
+                    opponentStats.value = {
+                      ...opponentStats.value,
+                      playerName: opponent.playerName || '未知玩家'
+                    }
+                  }
+                }
               }
               gameStatus.value = data.gameStatus || 'waiting'
               break
@@ -203,6 +217,15 @@ const connectWebSocket = async () => {
               if (data.playerId !== playerId.value) {
                 opponentProgress.value = data.percentage
               }
+              // 更新对手统计信息
+              if (data.stats) {
+                opponentStats.value = {
+                  wpm: data.stats.wpm,
+                  accuracy: data.stats.accuracy,
+                  errorCount: data.stats.errorCount,
+                  username: data.stats.username
+              }
+            }
               break
               
             case 'GAME_START':
@@ -226,15 +249,18 @@ const connectWebSocket = async () => {
 
       // 先获取房间信息
       fetchRoomInfo()
-      
+
       // 等待一段时间后再发送加入消息
       setTimeout(() => {
         console.log('发送加入房间消息')
+        console.log('当前玩家ID:', playerId.value)
+        console.log('当前玩家名称:', username.value)
         client.publish({
           destination: `/app/room/${roomId}/join`,
           body: JSON.stringify({
             type: 'PLAYER_JOIN',
             playerId: String(playerId.value),
+            playerName: String(username.value),
             timestamp: new Date().toISOString()
           })
         })
@@ -279,7 +305,13 @@ const sendProgress = () => {
       body: JSON.stringify({
         type: 'PLAYER_PROGRESS',
         playerId: playerId.value,
-        percentage: myProgress.value
+        percentage: myProgress.value,
+        stats: {
+          wpm: wpm.value,
+          accuracy: accuracy.value,
+          errorCount: errorCount.value,
+          username: username.value
+        }
       })
     })
   }
@@ -287,6 +319,9 @@ const sendProgress = () => {
 
 // 处理输入
 const handleInput = (event) => {
+  // 播放打字音效
+  soundManager.playTypeSound()
+
   // 计算输入延迟
   if (performanceStats.value.lastInputTime) {
     performanceStats.value.inputLatency = Date.now() - performanceStats.value.lastInputTime
@@ -423,15 +458,24 @@ const handlePlayerJoin = (data) => {
   console.log('处理玩家加入:', data)
   console.log('当前玩家列表:', players.value)
   console.log('加入的玩家ID:', data.playerId)
+  console.log('加入的玩家用户名:', data.playerName)
   
   // 确保 playerId 是字符串类型
   const joinedPlayerId = String(data.playerId)
   
   // 只有在玩家不在列表中时才添加
   if (!players.value.includes(joinedPlayerId)) {
-    // 不直接设置房主，而是追加到列表中
+    // 不直接设置房主，而追加到列表中
     players.value = [...players.value, joinedPlayerId]
     console.log('添加新玩家后的列表:', players.value)
+
+    // 如果加入的不是当前玩家，更新对手信息
+    if (joinedPlayerId !== String(playerId.value)) {
+      opponentStats.value = {
+        ...opponentStats.value,
+        playerName: data.playerName || '未知玩家',
+      }
+    }
   }
   
   // 如果房间满员，自动准备
@@ -462,12 +506,13 @@ const isHost = computed(() => {
 const fetchRoomInfo = async () => {
   try {
     if (stompClient.value?.connected) {
-      console.log('获取房间信息，当前玩家ID:', playerId.value)
+      console.log(`取房间信息，当前玩家ID：${playerId.value}，当前玩家名称：${username.value}`)
       stompClient.value.publish({
         destination: `/app/room/${roomId}/info`,
         body: JSON.stringify({
           type: 'GET_ROOM_INFO',
-          playerId: String(playerId.value)
+          playerId: String(playerId.value),
+          username: username.value
         })
       })
     }
@@ -493,17 +538,16 @@ const startGame = () => {
   }
 }
 
-
 // 生命周期钩子
 onMounted(async () => {
-  console.log('组件挂载，开始检查房间状态')
-  const roomStatus = await checkRoomStatus()
+  // console.log('组件挂载，开始检查房间状态')
+  // const roomStatus = await checkRoomStatus()
   
-  if (roomStatus && roomStatus.players && roomStatus.players.length >= 2) {
-    alert('该房间已满！')
-    router.push('/')
-    return
-  }
+  // if (roomStatus && roomStatus.players && roomStatus.players.length >= 2) {
+  //   alert('该房间已满！')
+  //   router.push('/')
+  //   return
+  // }
   
   // 添加快捷键监听
   window.addEventListener('keydown', handleKeyboardShortcut)
@@ -552,6 +596,7 @@ onUnmounted(() => {
               <span>WPM: {{ wpm }}</span>
               <span>准确率: {{ accuracy }}%</span>
               <span>错误: {{ errorCount }}</span>
+              <span>进度: {{ myProgress }}%</span>
             </div>
           </div>
           <div class="progress-bar">
@@ -569,9 +614,20 @@ onUnmounted(() => {
         <!-- 对手状态 -->
         <div class="player-stats opponent">
           <div class="player-info" :class="{ 'skeleton': players.length < 2 }">
-            <h3>{{ players.length >= 2 ? '对手' : '等待加入...' }}</h3>
-            <div class="stats" v-if="players.length >= 2">
-              <span>进度: {{ opponentProgress }}%</span>
+            <h3>{{ opponentStats.playerName || '等待加入...' }}</h3>
+            <div class="stats">
+              <template v-if="players.length >= 2">
+                <span>WPM: {{ opponentStats.wpm }}</span>
+                <span>准确率: {{ opponentStats.accuracy }}%</span>
+                <span>错误: {{ opponentStats.errorCount }}</span>
+                <span>进度: {{ opponentProgress }}%</span>
+              </template>
+              <template v-else>
+                <span>WPM: --</span>
+                <span>准确率: --%</span>
+                <span>错误: --</span>
+                <span>进度: --%</span>
+              </template>
             </div>
           </div>
           <div class="progress-bar" :class="{ 'skeleton': players.length < 2 }">
@@ -590,9 +646,10 @@ onUnmounted(() => {
             :class="{
               'correct': playerText[index] === char,
               'incorrect': playerText[index] && playerText[index] !== char,
-              'current': playerText.length === index
+              'current': playerText.length === index,
+              'space': char === ' '
             }"
-          >{{ char }}</span>
+          >{{ char === ' ' ? '␣' : char }}</span>
         </div>
 
         <!-- 输入区域 -->
@@ -998,5 +1055,59 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.8);
   font-family: system-ui, -apple-system, sans-serif;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+.target-text span.space {
+  /* 为空格字符添加特殊样式 */
+  border-radius: 2px;
+  margin: 0 1px;
+  color: #c7c7c7;
+  font-size: 0.9em;
+}
+
+.target-text span.space.correct {
+  background-color: rgba(66, 185, 131, 0.1);
+}
+
+.target-text span.space.incorrect {
+  background-color: rgba(255, 107, 107, 0.1);
+}
+
+.player-stats .stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.player-stats .stats span {
+  background: rgba(66, 185, 131, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.opponent .stats span {
+  background: rgba(44, 62, 80, 0.1);
+}
+
+.stats span {
+  transition: all 0.3s ease;
+}
+
+.player-stats .stats span {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
