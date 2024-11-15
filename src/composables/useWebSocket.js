@@ -375,6 +375,12 @@ export function useWebSocket(roomId) {
           detail: message
         }))
       }
+
+      if (message.type === "PLAYER_READY") {
+        window.dispatchEvent(new CustomEvent('player-ready', {
+          detail: message
+        }))
+      }
     })
 
     globalSubscriptions.value.set(subscriptionKey, subscription)
