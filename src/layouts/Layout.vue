@@ -2,7 +2,7 @@
  * @Author: hiddenSharp429 z404878860@163.com
  * @Date: 2024-10-28 20:13:49
  * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-03 16:23:30
+ * @LastEditTime: 2024-11-16 06:53:08
 -->
 <script setup>
 import { ref, onMounted } from 'vue'
@@ -54,6 +54,7 @@ const logout = () => {
 
     <footer class="footer">
       <p>© Type Shift Arena 2024</p>
+      <a href="https://beian.miit.gov.cn/" target="_blank">粤ICP备2024219097号-2</a>
     </footer>
   </div>
 </template>
