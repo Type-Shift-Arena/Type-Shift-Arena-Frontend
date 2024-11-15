@@ -2,7 +2,7 @@
  * @Author: hiddenSharp429 z404878860@163.com
  * @Date: 2024-11-14 19:40:25
  * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-15 19:38:28
+ * @LastEditTime: 2024-11-15 21:41:54
  */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
@@ -126,17 +126,8 @@ export function useGameState(roomId, stompClient) {
     }
 
     if (message.type === 'PLAYER_READY') {
-      if (message.playerId === opponentInfo.value?.id) {
-        opponentInfo.value = {
-          ...opponentInfo.value,
-          isReady: message.isReady
-        }
-      } else if (message.playerId === myInfo.value?.id) {
-        myInfo.value = {
-          ...myInfo.value,
-          isReady: message.isReady
-        }
-      }
+      console.log("PLAYER READY", message)
+      opponentInfo.value = { isReady: message.isReady }
     }
   }
 
@@ -145,6 +136,11 @@ export function useGameState(roomId, stompClient) {
     if (!stompClient.value?.connected) return
     
     const ready = !myInfo.value?.isReady
+    myInfo.value = {
+      ...myInfo.value,
+      isReady: ready
+    }
+    
     stompClient.value.publish({
       destination: `/app/room/${roomId}/ready`,
       body: JSON.stringify({
@@ -161,10 +157,15 @@ export function useGameState(roomId, stompClient) {
     window.addEventListener('room-info', (event) => {
       handleRoomInfo(event.detail)
     })
+
+    window.addEventListener('player-ready', (event) => {
+      handleRoomInfo(event.detail)
+    })
   })
 
   onUnmounted(() => {
     window.removeEventListener('room-info', handleRoomInfo)
+    window.removeEventListener('player-ready', handlePlayerReady)
   })
 
   return {

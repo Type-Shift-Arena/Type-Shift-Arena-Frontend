@@ -125,9 +125,15 @@ onMounted(async () => {
     console.error('[GameRoom] 初始化失败:', error)
   }
   window.addEventListener('room-info', (event) => {
-    // console.log('[GameState] 收到房间信息事件:', event.detail)
+    console.log('[GameState] 收到房间信息事件:', event.detail)
     handleRoomInfo(event.detail)
   })
+
+  window.addEventListener('player-ready', (event) => {
+    console.log('[GameState] 收到玩家准备事件:', event.detail)
+    handleRoomInfo(event.detail)
+  })
+
   window.addEventListener('keydown', handleKeyboardShortcut)
 })
 
@@ -213,7 +219,7 @@ onUnmounted(() => {
       <!-- 游戏控制区域 -->
       <div class="game-controls" v-if="gameStatus === 'WAITING'">
         <!-- 房主显示开始游戏按钮 -->
-        <template v-if="isHost">
+        <template v-if="myInfo.isHost">
           <button 
             class="start-game-btn"
             :disabled="!opponentInfo || !opponentInfo.isReady"
