@@ -1,13 +1,48 @@
 <template>
     <div class="matching-screen">
       <div class="matching-overlay"></div>
-      <canvas ref="bubbleCanvas" class="bubble-canvas" style="cursor: pointer;"></canvas>
-      <div class="matching-content">
-        <div class="matching-text">
-          寻找对手中
-          <span class="dots"><span>.</span><span>.</span><span>.</span></span>
+      
+      <!-- 匹配中的画布 -->
+      <template v-if="!matchFound">
+        <canvas ref="bubbleCanvas" class="bubble-canvas"></canvas>
+        <div class="matching-content">
+          <div class="matching-text">
+            寻找对手中
+            <span class="dots"><span>.</span><span>.</span><span>.</span></span>
+          </div>
+          <button @click="handleCancel" class="cancel-button">取消匹配</button>
         </div>
-        <button @click="handleCancel" class="cancel-button">取消匹配</button>
+      </template>
+
+      <!-- 匹配成功的画布 -->
+      <div v-else class="match-success-container">
+        <!-- 上三角区域 - 当前玩家 -->
+        <div class="player-area player-top" :class="{ 'slide-in': matchFound }">
+          <div class="player-info">
+            <img :src="currentPlayerAvatar" class="player-avatar" />
+            <div class="player-details">
+              <div class="player-name">{{ currentPlayerName }}</div>
+              <div class="player-id">ID: {{ currentPlayerId }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 中间区域 - 倒计时 -->
+        <div class="countdown-area">
+          <div class="match-status">匹配成功!</div>
+          <div class="countdown">{{ countdown }}s后开始游戏</div>
+        </div>
+
+        <!-- 下三角区域 - 对手 -->
+        <div class="player-area player-bottom" :class="{ 'slide-in': matchFound }">
+          <div class="player-info">
+            <img :src="opponentAvatar" class="player-avatar" />
+            <div class="player-details">
+              <div class="player-name">{{ opponentName }}</div>
+              <div class="player-id">ID: {{ opponentId }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </template>
@@ -24,17 +59,31 @@
       // 期望的格式: { language: string, category: string, difficulty: string }
     }
   })
-  
-  const emit = defineEmits(['cancel'])
-  
-  const bubbleCanvas = ref(null)
-  let bubbles = []
-  let animationFrame = null
-  
+
   const router = useRouter()
   const { connectWebSocket, sendMatchRequest, subscribeToMatchmaking } = useWebSocket()
-  
+  const emit = defineEmits(['cancel'])
+  const bubbleCanvas = ref(null)
+
+  let bubbles = []
+  let animationFrame = null
   let matchmakingSubscription = null
+  let burstParticles = [] // 存储破裂粒子
+  
+  const matchFound = ref(false)
+  const countdown = ref(5)
+  const roomInfo = ref(null)
+  let countdownTimer = null // 添加定时器引用
+
+  // 当前玩家信息
+  const currentPlayerName = ref(localStorage.getItem('userName'))
+  const currentPlayerId = ref(localStorage.getItem('userId'))
+  const currentPlayerAvatar = ref(localStorage.getItem('imgSrc'))
+
+  // 对手信息
+  const opponentName = ref('')
+  const opponentId = ref('')
+  const opponentAvatar = ref('')
   
   // Canvas 初始化逻辑
   const initCanvas = () => {
@@ -118,8 +167,6 @@
     }
     return particles
   }
-  
-  let burstParticles = [] // 存储破裂粒子
   
   // 添加点击检测
   const handleCanvasClick = (event) => {
@@ -237,6 +284,57 @@
     
     animationFrame = requestAnimationFrame(animateBubbles)
   }
+
+  // 处理匹配成功
+  const handleMatchFound = (event) => {
+    const { roomId, opponent, gameInfo } = event.detail
+    console.log('[MatchingScreen] 收到匹配成功事件:', event.detail)
+    
+    // 防止重复触发
+    if (matchFound.value) return
+    
+    // 保存房间信息
+    roomInfo.value = { roomId, gameInfo }
+    
+    // 更新对手信息
+    opponentName.value = opponent.name
+    opponentId.value = opponent.id
+    opponentAvatar.value = opponent.avatar || '/default-avatar.png'
+    
+    // 显示匹配成功画面
+    matchFound.value = true
+    countdown.value = 5 // 确保倒计时从5开始
+    
+    // 清除可能存在的旧定时器
+    if (countdownTimer) {
+      clearInterval(countdownTimer)
+    }
+    
+    // 开始新的倒计时
+    countdownTimer = setInterval(() => {
+      countdown.value--
+      console.log('[MatchingScreen] 倒计时:', countdown.value)
+      
+      if (countdown.value <= 0) {
+        clearInterval(countdownTimer)
+        countdownTimer = null
+        // 倒计时结束后跳转到游戏房间
+        router.push(`/room/${roomId}`)
+      }
+    }, 1000)
+  }
+
+  // 取消匹配
+  const handleCancel = () => {
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame)
+    }
+    if (countdownTimer) {
+      clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+    emit('cancel')
+  }
   
   // 组件挂载时初始化
   onMounted(async () => {
@@ -256,6 +354,7 @@
         
         const playerId = localStorage.getItem('userId')
         const playerName = localStorage.getItem('userName')
+        const playerAvatar = localStorage.getItem('imgSrc')
 
         // 现在可以安全地订阅和发送消息
         matchmakingSubscription = subscribeToMatchmaking(playerId)
@@ -263,6 +362,7 @@
         sendMatchRequest({
           playerId,
           playerName,
+          playerAvatar,
           language: props.matchingOptions.language,
           category: props.matchingOptions.category,
           difficulty: props.matchingOptions.difficulty
@@ -278,20 +378,26 @@
         if (animationFrame) {
           cancelAnimationFrame(animationFrame)
         }
-        // 取消匹配订阅
-        if (matchmakingSubscription) {
-          matchmakingSubscription.unsubscribe()
-        }
+        // 取消所有订阅
+        // if (matchmakingSubscription) {
+        //   matchmakingSubscription.unsubscribe()
+        // }
+        // // 使用 unsubscribe 方法清理所有相关订阅
+        // unsubscribe(`room_${roomId}`)  // 房间广播订阅
+        // unsubscribe(`room_info_${playerId}`)  // 个人房间信息订阅
       })
     })
   })
   
-  const handleCancel = () => {
-    if (animationFrame) {
-      cancelAnimationFrame(animationFrame)
-    }
-    emit('cancel')
-  }
+  // 监听匹配成功事件
+  onMounted(() => {
+    window.addEventListener('match-found', handleMatchFound)
+  })
+
+  onUnmounted(() => {
+    window.removeEventListener('match-found', handleMatchFound)
+  })
+
   </script>
   
   <style scoped>
@@ -408,5 +514,125 @@
   
   .cancel-button:active {
     transform: translateY(0);
+  }
+  
+  .match-success-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .player-area {
+    width: 100%;
+    height: 40vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+  }
+  
+  .player-area.slide-in {
+    opacity: 1;
+  }
+  
+  .player-top {
+    background: linear-gradient(to bottom, rgba(79, 140, 255, 0.8), transparent);
+    transform: translateY(-100%);
+  }
+  
+  .player-top.slide-in {
+    transform: translateY(0);
+  }
+  
+  .player-bottom {
+    background: linear-gradient(to top, rgba(255, 79, 140, 0.8), transparent);
+    transform: translateY(100%);
+  }
+  
+  .player-bottom.slide-in {
+    transform: translateY(0);
+  }
+  
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  .player-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.5);
+  }
+  
+  .player-details {
+    color: white;
+  }
+  
+  .player-name {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .player-id {
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+  
+  .countdown-area {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: white;
+    z-index: 4;
+  }
+  
+  .match-status {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    animation: pulseText 1.5s infinite;
+  }
+  
+  .countdown {
+    font-size: 1.8rem;
+    opacity: 0.9;
+  }
+  
+  @keyframes pulseText {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+  
+  /* 添加响应式设计 */
+  @media (max-width: 768px) {
+    .player-info {
+      flex-direction: column;
+      text-align: center;
+    }
+  
+    .player-avatar {
+      width: 60px;
+      height: 60px;
+    }
+  
+    .player-name {
+      font-size: 1.2rem;
+    }
   }
   </style>
