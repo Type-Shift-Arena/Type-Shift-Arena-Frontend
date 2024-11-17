@@ -61,7 +61,7 @@
   })
 
   const router = useRouter()
-  const { connectWebSocket, sendMatchRequest, subscribeToMatchmaking } = useWebSocket()
+  const { connectWebSocket, sendMatchRequest, sendCancelMatchRequest, subscribeToMatchmaking } = useWebSocket()
   const emit = defineEmits(['cancel'])
   const bubbleCanvas = ref(null)
 
@@ -333,6 +333,17 @@
       clearInterval(countdownTimer)
       countdownTimer = null
     }
+
+    // 发送取消匹配请求
+    const playerId = localStorage.getItem('userId')
+    sendCancelMatchRequest({
+      playerId,
+      playerName: localStorage.getItem('userName'),
+      playerAvatar: localStorage.getItem('imgSrc'),
+      language: props.matchingOptions.language,
+      category: props.matchingOptions.category,
+      difficulty: props.matchingOptions.difficulty
+    })
     emit('cancel')
   }
   

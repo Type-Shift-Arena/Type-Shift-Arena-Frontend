@@ -322,6 +322,22 @@ export function useWebSocket(roomId) {
       })
     })
   }
+  
+  // 发起取消匹配请求
+  const sendCancelMatchRequest = (matchData) => {
+    if (!stompClient.value?.connected) {
+      console.error('WebSocket未连接，无法发起取消匹配')
+      return
+    }
+
+    stompClient.value.publish({
+      destination: '/app/matchmaking/cancel',
+      body: JSON.stringify({ 
+        ...matchData, 
+        timestamp: Date.now() 
+      })
+    })
+  }
 
   // 订阅个人房间信息
   const subscribeToRoomInfo = (playerId) => {
@@ -434,6 +450,7 @@ export function useWebSocket(roomId) {
     disconnect,
     subscribeToMatchmaking,
     sendMatchRequest,
+    sendCancelMatchRequest,
     unsubscribe,
     subscribeToRoom,
     subscribeToRoomInfo,
