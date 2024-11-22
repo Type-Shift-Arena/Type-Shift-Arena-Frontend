@@ -44,8 +44,7 @@
           component: GameLobby,
           meta: { requiresAuth: true }
         },
-        //{
-        },
+
         {
           path: 'typing-practice',
           name: 'typingPractice',
