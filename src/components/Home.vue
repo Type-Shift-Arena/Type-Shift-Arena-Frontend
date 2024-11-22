@@ -38,6 +38,11 @@ const joinTestRoom = () => {
     alert('请输入房间ID')
   }
 }
+
+// 技能提升按钮的点击事件处理函数
+const startTypingPractice = () => {
+  router.push('/typing-practice')
+}
 </script>
 
 <template>
@@ -61,8 +66,13 @@ const joinTestRoom = () => {
         <p>与其他玩家实时对战，体验紧张刺激的打字比赛</p>
       </div>
       <div class="feature">
-        <h3>技能提升</h3>
+
+        <button @click="startTypingPractice" class="practice-button">
+        技能提升
+      </button>
         <p>通过练习提高打字速度和准确率</p>
+        <!-- 将“技能提升”字样改造成跳转按钮 -->
+
       </div>
       <div class="feature">
         <h3>排行榜</h3>
@@ -168,6 +178,11 @@ const joinTestRoom = () => {
   background: #f8f9fa;
   border-radius: 8px;
 }
+
+.practice-button {
+  font-size: 1.2rem; /* 增大字体大小 */
+}
+
 
 .test-buttons input {
   padding: 0.5rem;
