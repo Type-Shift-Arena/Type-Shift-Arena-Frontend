@@ -41,7 +41,8 @@ const {
   opponentInfo,
   handleRoomInfo,
   toggleReady,
-  requestRoomInfo
+  requestRoomInfo,
+  finishGame
 } = useGameState(roomId, stompClient)
 
 // 玩家统计相关
@@ -162,6 +163,21 @@ onMounted(async () => {
     }
   })
 
+  // 添加游戏结束事件监听
+  window.addEventListener('game-finish', (event) => {
+    const { winnerId } = event.detail
+    gameStatus.value = 'finished'
+    
+    // 可以在这里添加显示获胜者信息的逻辑
+    if (winnerId === localStorage.getItem('userId')) {
+      // 显示胜利信息
+      logGameEvent('你赢了！')
+    } else {
+      // 显示失败信息
+      logGameEvent('对手获胜！')
+    }
+  })
+
   window.addEventListener('keydown', handleKeyboardShortcut)
 })
 
@@ -181,6 +197,7 @@ onUnmounted(() => {
     subscriptions.value.delete(`player_channel_${playerId}`)
   }
   window.removeEventListener('game-progress', handleGameProgress)
+  window.removeEventListener('game-finish', handleGameFinish)
 })
 
 // 处理输入

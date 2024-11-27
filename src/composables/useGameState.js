@@ -176,6 +176,19 @@ export function useGameState(roomId, stompClient) {
         }
       }))
     }
+
+    if (message.type === 'GAME_FINISH') {
+      console.log('[GameState] 游戏结束:', message)
+      gameStatus.value = 'finished'
+      
+      // 触发游戏结束事件
+      window.dispatchEvent(new CustomEvent('game-finish', {
+        detail: {
+          winnerId: message.playerId,
+          timestamp: message.timestamp
+        }
+      }))
+    }
   }
 
   // 切换准备状态
@@ -199,6 +212,20 @@ export function useGameState(roomId, stompClient) {
     })
   }
 
+  // 添加结束游戏的方法
+  const finishGame = (playerId) => {
+    if (stompClient.value?.connected) {
+      stompClient.value.publish({
+        destination: `/app/room/${roomId}/finish`,
+        body: JSON.stringify({
+          type: 'GAME_FINISH',
+          playerId: playerId,
+          timestamp: Date.now()
+        })
+      })
+    }
+  }
+
   return {
     gameStatus,
     players,
@@ -214,6 +241,7 @@ export function useGameState(roomId, stompClient) {
     handlePlayerJoin,
     handleRoomInfo,  
     toggleReady,
-    requestRoomInfo
+    requestRoomInfo,
+    finishGame,
   }
 }
