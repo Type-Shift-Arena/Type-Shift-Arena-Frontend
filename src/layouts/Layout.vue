@@ -39,6 +39,7 @@ const logout = () => {
           </template>
           <template v-else>
             <router-link to="/game-lobby">游戏大厅</router-link>
+            <router-link to="/personal">个人中心</router-link>
             <a @click="logout" class="logout-btn">退出</a>
             <router-link to="/settings" class="settings-link">
               <span class="material-icons">settings</span>
@@ -131,6 +132,7 @@ nav {
   position: fixed;
   bottom: 0;
   width: 100%;
+  z-index: 10;
 }
 
 .logout-btn {
