@@ -192,6 +192,7 @@ onUnmounted(() => {
     subscriptions.value.get(`room_${roomId}`).unsubscribe()
     subscriptions.value.delete(`room_${roomId}`)
   }
+ 
   if (subscriptions.value.has(`player_channel_${playerId}`)) {
     subscriptions.value.get(`player_channel_${playerId}`).unsubscribe()
     subscriptions.value.delete(`player_channel_${playerId}`)

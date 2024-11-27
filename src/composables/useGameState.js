@@ -116,14 +116,17 @@ export function useGameState(roomId, stompClient) {
           avatar: message.opponentAvatar
         }
       }
+
       // 更新玩家列表
       if (message.playersId) {
         players.value = message.playersId
       }
+
       // 更新游戏状态
       if (message.roomStatus) {
         gameStatus.value = message.roomStatus
       }
+
       // 更新目标文本
       if (message.targetText) {
         targetText.value = message.targetText
