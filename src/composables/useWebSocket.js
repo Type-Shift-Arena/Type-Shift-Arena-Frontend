@@ -290,6 +290,17 @@ export function useWebSocket(roomId) {
           }
         }))
       }
+
+      if (message.type === "PLAYER_PROGRESS") {
+        console.log('[Room] 更新玩家进度:', message)
+        window.dispatchEvent(new CustomEvent('game-progress', {
+          detail: {
+            playerId: message.playerId,
+            percentage: message.percentage,
+            stats: message.stats
+          }
+        }))
+      }
     })
 
     // 同时保存到全局和本地
