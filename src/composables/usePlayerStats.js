@@ -43,20 +43,34 @@ export function usePlayerStats(roomId, stompClient) {
   // 发送进度
   const sendProgress = () => {
     if (stompClient.value?.connected) {
+      const progressData = {
+        type: 'PLAYER_PROGRESS',
+        playerId: localStorage.getItem('userId'),
+        percentage: myProgress.value,
+        stats: {
+          wpm: myStats.wpm,
+          accuracy: myStats.accuracy,
+          errorCount: myStats.errorCount,
+          username: myStats.username
+        }
+      }
+
       stompClient.value.publish({
         destination: `/app/room/${roomId}/progress`,
-        body: JSON.stringify({
-          type: 'PLAYER_PROGRESS',
-          playerId: localStorage.getItem('userId'),
-          percentage: myProgress.value,
-          stats: {
-            wpm: myStats.wpm,
-            accuracy: myStats.accuracy,
-            errorCount: myStats.errorCount,
-            username: myStats.username
-          }
-        })
+        body: JSON.stringify(progressData)
       })
+
+      // 当进度达到100%时，发送游戏结束消息
+      if (myProgress.value === 100) {
+        stompClient.value.publish({
+          destination: `/app/room/${roomId}/finish`,
+          body: JSON.stringify({
+            type: 'GAME_FINISH',
+            playerId: localStorage.getItem('userId'),
+            timestamp: Date.now()
+          })
+        })
+      }
     }
   }
 
