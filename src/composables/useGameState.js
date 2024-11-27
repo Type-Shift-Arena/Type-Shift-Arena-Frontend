@@ -7,12 +7,12 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 export function useGameState(roomId, stompClient) {
-  const gameStatus = ref('waiting') // waiting, ready, playing, finished
+  const gameStatus = ref('waiting')
   const players = ref([])
-  const targetText = ref('') // 目标文本
+  const targetText = ref('')
   const playerId = ref(localStorage.getItem('userId'))
-  const opponentInfo = ref(null)  // 对手信息
-  const myInfo = ref(null)        // 我的信息
+  const opponentInfo = ref(null)
+  const myInfo = ref(null)
   
   // 计算是否为房主
   const isHost = computed(() => {
@@ -77,23 +77,31 @@ export function useGameState(roomId, stompClient) {
     }
   }
 
-  // 获取房间信息
-  const fetchRoomInfo = () => {
-    if (stompClient.value?.connected) {
-      stompClient.value.publish({
-        destination: `/app/room/${roomId}/info`,
-        body: JSON.stringify({
-          type: 'GET_ROOM_INFO',
-          playerId: String(playerId.value),
-          username: localStorage.getItem('userName')
-        })
-      })
+  // 请求房间信息的函数
+  const requestRoomInfo = (roomId, playerId, playerName) => {
+    if (!stompClient.value?.connected) {
+      console.error('WebSocket未连接，无法请求房间信息')
+      return
     }
+
+    console.log(`[GameState] 请求房间信息: roomId=${roomId}, playerId=${playerId}`)
+    
+    stompClient.value.publish({
+      destination: `/app/room/${roomId}/info`,
+      body: JSON.stringify({
+        type: "REQUEST_ROOM_INFO",
+        roomId: roomId,
+        playerId: playerId,
+        playerName: playerName,
+        timestamp: Date.now()
+      })
+    })
   }
 
   // 处理房间信息
   const handleRoomInfo = (message) => {    
     if (message.type === 'GAME_INFO') {
+      console.log("[GameState] 处理房间信息:", message)
       // 更新玩家信息
       if (message.playerId === playerId.value) {
         myInfo.value = {
@@ -108,17 +116,14 @@ export function useGameState(roomId, stompClient) {
           avatar: message.opponentAvatar
         }
       }
-
       // 更新玩家列表
       if (message.playersId) {
         players.value = message.playersId
       }
-
       // 更新游戏状态
       if (message.roomStatus) {
         gameStatus.value = message.roomStatus
       }
-
       // 更新目标文本
       if (message.targetText) {
         targetText.value = message.targetText
@@ -126,7 +131,7 @@ export function useGameState(roomId, stompClient) {
     }
 
     if (message.type === 'PLAYER_READY') {
-      console.log("PLAYER READY", message)
+      console.log("[GameState] 处理玩家准备消息:", message)
       opponentInfo.value = { 
         ...opponentInfo.value,
         isReady: message.isReady 
@@ -135,31 +140,39 @@ export function useGameState(roomId, stompClient) {
 
     if (message.type === 'GAME_START') {
       console.log('[GameState] 处理游戏开始消息:', message)
-      
-      // 更新游戏状态
+
       gameStatus.value = 'playing'
       
-      // 更新目标文本
       if (message.targetText) {
         targetText.value = message.targetText
       }
       
-      // 重置玩家状态
       myInfo.value = {
         ...myInfo.value,
-        isReady: false  // 重置准备状态
+        isReady: false
       }
       
       opponentInfo.value = {
         ...opponentInfo.value,
-        isReady: false  // 重置准备状态
+        isReady: false
       }
       
-      // 触发游戏开始事件
+      // 创建触发游戏开始事件
       window.dispatchEvent(new CustomEvent('game-start', {
         detail: {
           targetText: message.targetText,
-          startTime: new Date().getTime()
+          startTime: message.startTime || new Date().getTime()
+        }
+      }))
+    }
+
+    if (message.type === "PLAYER_PROGRESS") {
+      console.log('[GameState] 更新玩家进度:', message)
+      window.dispatchEvent(new CustomEvent('game-progress', {
+        detail: {
+          playerId: message.playerId,
+          percentage: message.percentage,
+          stats: message.stats
         }
       }))
     }
@@ -186,22 +199,6 @@ export function useGameState(roomId, stompClient) {
     })
   }
 
-  // 监听房间信息事件
-  onMounted(() => {
-    window.addEventListener('room-info', (event) => {
-      handleRoomInfo(event.detail)
-    })
-
-    window.addEventListener('player-ready', (event) => {
-      handleRoomInfo(event.detail)
-    })
-  })
-
-  onUnmounted(() => {
-    window.removeEventListener('room-info', handleRoomInfo)
-    window.removeEventListener('player-ready', handlePlayerReady)
-  })
-
   return {
     gameStatus,
     players,
@@ -209,14 +206,14 @@ export function useGameState(roomId, stompClient) {
     playerId,
     isHost,
     isRoomFull,
-    opponentInfo,  // 新增
-    myInfo,        // 新增
+    opponentInfo,
+    myInfo,       
     resetGame,
     toggleGameStatus,
     startGame,
     handlePlayerJoin,
-    fetchRoomInfo,
-    handleRoomInfo,  // 新增
-    toggleReady
+    handleRoomInfo,  
+    toggleReady,
+    requestRoomInfo
   }
 }

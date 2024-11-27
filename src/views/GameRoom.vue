@@ -22,9 +22,8 @@ const {
   checkConnection,
   sendTestMessage,
   disconnect,
-  subscribeToRoom,
-  subscribeToRoomInfo,
-  requestRoomInfo,
+  subscribeToRoomBroadcast,
+  subscribeToPlayerChannel,
   subscriptions,
   hasSubscription,
 } = useWebSocket(roomId)
@@ -41,7 +40,8 @@ const {
   myInfo,
   opponentInfo,
   handleRoomInfo,
-  toggleReady
+  toggleReady,
+  requestRoomInfo
 } = useGameState(roomId, stompClient)
 
 // 玩家统计相关
@@ -104,39 +104,33 @@ onMounted(async () => {
 
     // 1. 检查并订阅房间广播消息
     if (!hasSubscription(`room_${roomId}`)){
-      console.log('[GameRoom] 订阅房间广播消息')
-      await subscribeToRoom(roomId)
-    } else {
-      console.log('[GameRoom] 已存在房间广播订阅，复用现有订阅')
+      await subscribeToRoomBroadcast(roomId)
     }
 
     // 2. 检查并订阅个人房间信息
-    if (!hasSubscription(`room_info_${playerId}`)) {
-      console.log('[GameRoom] 订阅个人房间信息')
-      await subscribeToRoomInfo(playerId)
-    } else {
-      console.log('[GameRoom] 已存在个人房间信息订阅，复用现有订阅')
+    if (!hasSubscription(`player_channel_${playerId}`)) {
+      await subscribeToPlayerChannel(playerId)
     }
 
     // 3. 请求初始房间信息
     requestRoomInfo(roomId, playerId, playerName)
 
-    // startGame() // 开始游戏
   } catch (error) {
     console.error('[GameRoom] 初始化失败:', error)
   }
-  window.addEventListener('room-info', (event) => {
-    console.log('[GameState] 收到房间信息事件:', event.detail)
+
+  // 监听玩家频道消息
+  window.addEventListener('player-channel', (event) => {
     handleRoomInfo(event.detail)
   })
 
-  window.addEventListener('player-ready', (event) => {
-    console.log('[GameState] 收到玩家准备事件:', event.detail)
+  // 监听房间广播消息
+  window.addEventListener('room-broadcast', (event) => {
     handleRoomInfo(event.detail)
   })
 
-  window.addEventListener('game-start', (event) => {
-    console.log('[GameRoom] 收到游戏开始事件:', event.detail)
+  // 监听游戏开始事件
+  window.addEventListener('game-start', () => {
     showCountdown.value = true
     countdown.value = 3
     
@@ -150,11 +144,10 @@ onMounted(async () => {
         // 重置游戏统计
         resetStats()
       }
-  }, 1000)
-})
+    }, 1000)
+  })
 
-  window.addEventListener('keydown', handleKeyboardShortcut)
-
+  // 监听游戏进度事件
   window.addEventListener('game-progress', (event) => {
     const { playerId, percentage, stats } = event.detail
     // 如果不是自己的进度，则更新对手状态
@@ -168,6 +161,8 @@ onMounted(async () => {
       })
     }
   })
+
+  window.addEventListener('keydown', handleKeyboardShortcut)
 })
 
 // 组件卸载时的清理
@@ -181,9 +176,9 @@ onUnmounted(() => {
     subscriptions.value.get(`room_${roomId}`).unsubscribe()
     subscriptions.value.delete(`room_${roomId}`)
   }
-  if (subscriptions.value.has(`room_info_${playerId}`)) {
-    subscriptions.value.get(`room_info_${playerId}`).unsubscribe()
-    subscriptions.value.delete(`room_info_${playerId}`)
+  if (subscriptions.value.has(`player_channel_${playerId}`)) {
+    subscriptions.value.get(`player_channel_${playerId}`).unsubscribe()
+    subscriptions.value.delete(`player_channel_${playerId}`)
   }
   window.removeEventListener('game-progress', handleGameProgress)
 })
