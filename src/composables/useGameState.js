@@ -127,7 +127,21 @@ export function useGameState(roomId, stompClient) {
 
     if (message.type === 'PLAYER_READY') {
       console.log("PLAYER READY", message)
-      opponentInfo.value = { isReady: message.isReady }
+      opponentInfo.value = { 
+        ...opponentInfo.value,
+        isReady: message.isReady 
+      }
+    }
+
+    if (message.type === 'GAME_START') {
+      // 只处理游戏开始必需的信息
+      if (message.targetText) {
+        targetText.value = message.targetText
+      }
+      if (message.roomStatus) {
+        gameStatus.value = message.roomStatus
+      }
+      // 可以添加开始时间等其他必要信息
     }
   }
 
