@@ -6,6 +6,7 @@ import { useGameState } from '@/composables/useGameState'
 import { usePlayerStats } from '@/composables/usePlayerStats'
 import DebugPanel from '@/components/GameRoom/DebugPanel.vue'
 import StatusBar from '@/components/GameRoom/StatusBar.vue'
+import GameArea from '@/components/GameRoom/GameArea.vue'
 
 const route = useRoute()
 const roomId = route.params.id
@@ -153,6 +154,20 @@ onMounted(async () => {
 })
 
   window.addEventListener('keydown', handleKeyboardShortcut)
+
+  window.addEventListener('game-progress', (event) => {
+    const { playerId, percentage, stats } = event.detail
+    // 如果不是自己的进度，则更新对手状态
+    if (playerId !== localStorage.getItem('userId')) {
+      updateOpponentStats({
+        progress: percentage,
+        wpm: stats.wpm,
+        accuracy: stats.accuracy,
+        errorCount: stats.errorCount,
+        username: stats.username
+      })
+    }
+  })
 })
 
 // 组件卸载时的清理
@@ -170,7 +185,19 @@ onUnmounted(() => {
     subscriptions.value.get(`room_info_${playerId}`).unsubscribe()
     subscriptions.value.delete(`room_info_${playerId}`)
   }
+  window.removeEventListener('game-progress', handleGameProgress)
 })
+
+// 处理输入
+const handleGameInput = (event) => {
+  // 调用 usePlayerStats 中的 handleInput 方法处理输入
+  const isCompleted = handleInput(event, targetText.value, gameStatus.value)
+  
+  // 如果完成了游戏
+  if (isCompleted) {
+    gameStatus.value = 'finished'
+  }
+}
 </script>
 
 <template>
@@ -201,30 +228,12 @@ onUnmounted(() => {
       />
 
       <!-- 游戏区域 -->
-      <div class="game-content">
-        <!-- 目标文本 -->
-        <div class="target-text">
-          <span 
-            v-for="(char, index) in targetText" 
-            :key="index"
-            :class="{
-              'correct': playerText[index] === char,
-              'incorrect': playerText[index] && playerText[index] !== char,
-              'current': playerText.length === index,
-              'space': char === ' '
-            }"
-          >{{ char === ' ' ? '␣' : char }}</span>
-        </div>
-
-        <!-- 输入区域 -->
-        <textarea
-          v-model="playerText"
-          @input="handleInput"
-          :disabled="gameStatus === 'finished'"
-          :placeholder="gameStatus === 'playing' ? '开始输入...' : '等待对手加入...'"
-          class="input-area"
-        ></textarea>
-      </div>
+      <GameArea
+        :target-text="targetText"
+        :game-status="gameStatus"
+        v-model:player-text="playerText"
+        @input="handleGameInput"
+      />
 
       <!-- 游戏状态 -->
       <div class="game-status" v-if="gameStatus !== 'playing'">
@@ -290,44 +299,6 @@ onUnmounted(() => {
   padding: 2rem;
 }
 
-.game-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.target-text {
-  font-size: 1.2rem;
-  line-height: 1.6;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 4px;
-  color: #2c3e50;
-}
-
-.input-area {
-  width: 100%;
-  min-height: 100px;
-  padding: 1rem;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  font-size: 1.2rem;
-  line-height: 1.6;
-  resize: vertical;
-}
-
-.input-area:focus {
-  outline: none;
-  border-color: #42b983;
-}
-
-.input-area:disabled {
-  background: #f8f9fa;
-  cursor: not-allowed;
-}
-
 .game-status {
   text-align: center;
   font-size: 1.5rem;
@@ -379,22 +350,6 @@ onUnmounted(() => {
 .connection-status.连接错误, .connection-status.已断开 {
   background: #f56c6c;
   color: white;
-}
-
-.target-text span.space {
-  /* 为空格字符添加特殊样式 */
-  border-radius: 2px;
-  margin: 0 1px;
-  color: #c7c7c7;
-  font-size: 0.9em;
-}
-
-.target-text span.space.correct {
-  background-color: rgba(66, 185, 131, 0.1);
-}
-
-.target-text span.space.incorrect {
-  background-color: rgba(255, 107, 107, 0.1);
 }
 
 .countdown-overlay {
