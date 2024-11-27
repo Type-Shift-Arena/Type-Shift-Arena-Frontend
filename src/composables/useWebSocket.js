@@ -15,24 +15,10 @@ export function useWebSocket(roomId) {
   const connectionLogs = ref([])
   const subscriptions = ref(new Map())
 
-  // 检查房间状态
-  const checkRoomStatus = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/rooms/${roomId}/status`)
-      if (response.status === 404) {
-        return { exists: false, players: [] }
-      }
-      if (!response.ok) {
-        throw new Error('获取房间状态失败')
-      }
-      const data = await response.json()
-      return { exists: true, ...data }
-    } catch (error) {
-      console.error('检查房间状态时出错:', error)
-      return { exists: false, players: [] }
-    }
-  }
-
+  /* 
+    WebSocket模块函数
+    @Author: hiddenSharp429(zixian zhu)
+  */
   // 连接 WebSocket
   const connectWebSocket = async () => {
     // 如果已经有全局连接，直接使用
@@ -192,6 +178,47 @@ export function useWebSocket(roomId) {
       console.log('[WebSocket] 已断开连接')
     }
   }
+  /* 
+    WebSocket模块函数 END
+  */
+
+
+
+  /*
+    匹配模块函数 START
+    @Author: hiddenSharp429(zixian zhu)
+  */
+  // 发起匹配请求
+  const sendMatchRequest = (matchData) => {
+    if (!stompClient.value?.connected) {
+      console.error('WebSocket未连接，无法发起匹配')
+      return
+    }
+
+    stompClient.value.publish({
+      destination: '/app/matchmaking/queue',
+      body: JSON.stringify({
+        ...matchData,
+        timestamp: Date.now()
+      })
+    })
+  }
+  
+  // 发起取消匹配请求
+  const sendCancelMatchRequest = (matchData) => {
+    if (!stompClient.value?.connected) {
+      console.error('WebSocket未连接，无法发起取消匹配')
+      return
+    }
+
+    stompClient.value.publish({
+      destination: '/app/matchmaking/cancel',
+      body: JSON.stringify({ 
+        ...matchData, 
+        timestamp: Date.now() 
+      })
+    })
+  }
 
   // 匹配订阅函数
   const subscribeToMatchmaking = (playerId) => {
@@ -228,11 +255,11 @@ export function useWebSocket(roomId) {
         })
 
         // 1. 订阅房间广播消息（游戏开始、结算等）
-        const roomSubscription = subscribeToRoom(message.roomId)
+        const roomSubscription = subscribeToRoomBroadcast(message.roomId)
         console.log('[Matchmaking] 已订阅房间广播消息:', roomSubscription)
         
         // 2. 订阅个人房间信息（对手状态等）
-        const roomInfoSubscription = subscribeToRoomInfo(message.playerId)
+        const roomInfoSubscription = subscribeToPlayerChannel(message.playerId)
         console.log('[Matchmaking] 已订阅个人房间信息:', roomInfoSubscription)
         
         // 3. 触发匹配成功事件
@@ -259,53 +286,74 @@ export function useWebSocket(roomId) {
     globalSubscriptions.value.set(`matchmaking_${playerId}`, subscription)
     return subscription
   }
+  /*
+    匹配模块函数 END
+  */
 
-  // 添加房间订阅函数
-  const subscribeToRoom = (roomId) => {
-    // 检查全局订阅
-    if (globalSubscriptions.value.has(`room_${roomId}`)) {
-      console.log(`[Room] 复用房间 ${roomId} 的现有订阅`)
-      return globalSubscriptions.value.get(`room_${roomId}`)
+
+
+  /*
+    房间模块函数 START
+    @Author: hiddenSharp429(zixian zhu)
+  */
+  // 订阅房间广播消息 (公共消息通道)
+  const subscribeToRoomBroadcast = (roomId) => {
+    const subscriptionKey = `room_broadcast_${roomId}`
+
+    if (globalSubscriptions.value.has(subscriptionKey)) {
+      console.log(`[RoomBroadcast] 复用现有订阅: ${subscriptionKey}`)
+      return globalSubscriptions.value.get(subscriptionKey)
     }
 
-    // 检查WebSocket连接
     if (!stompClient.value?.connected) {
-      console.error('[Room] WebSocket未连接，无法订阅房间消息')
+      console.error('WebSocket未连接，无法订阅房间广播')
       return
     }
     
-    console.log(`[Room] 开始订阅房间消息: /topic/room/${roomId}`)
+    console.log(`[RoomBroadcast] 开始订阅房间消息: /topic/room/${roomId}`)
     
-    // 订阅房间消息
     const subscription = stompClient.value.subscribe(`/topic/room/${roomId}`, (response) => {
       const message = JSON.parse(response.body)
-      console.log('[Room] 收到房间消息:', message)
+      console.log('[RoomBroadcast] 收到房间消息:', message)
       
-      if (message.type === "GAME_START") {
-        console.log('[Room] 游戏开始:', message)
-        window.dispatchEvent(new CustomEvent('game-start', {
-          detail: {
-            targetText: message.targetText,
-            startTime: message.startTime
-          }
-        }))
-      }
+      window.dispatchEvent(new CustomEvent('room-broadcast', {
+        detail: message
+      }))
+    })
+  
+    globalSubscriptions.value.set(subscriptionKey, subscription)
+    subscriptions.value.set(subscriptionKey, subscription)
+    return subscription
+  }
 
-      if (message.type === "PLAYER_PROGRESS") {
-        console.log('[Room] 更新玩家进度:', message)
-        window.dispatchEvent(new CustomEvent('game-progress', {
-          detail: {
-            playerId: message.playerId,
-            percentage: message.percentage,
-            stats: message.stats
-          }
-        }))
-      }
+  // 订阅个人房间信息 (私有消息通道)
+  const subscribeToPlayerChannel = (playerId) => {
+    const subscriptionKey = `player_channel_${playerId}`
+    
+    if (globalSubscriptions.value.has(subscriptionKey)) {
+      console.log(`[PlayerChannel] 复用现有订阅: ${subscriptionKey}`)
+      return globalSubscriptions.value.get(subscriptionKey)
+    }
+    
+    if (!stompClient.value?.connected) {
+      console.error('WebSocket未连接，无法订阅房间信息')
+      return
+    }
+
+    console.log(`[PlayerChannel] 开始订阅房间信息: /queue/room/${playerId}/info`)
+    
+    const subscription = stompClient.value.subscribe(`/queue/room/${playerId}/info`, (response) => {
+      const message = JSON.parse(response.body)
+      console.log('[PlayerChannel] 收到房间信息:', message)
+      
+      // 所有消息都通过 player-channel 事件转发给 useGameState 处理
+      window.dispatchEvent(new CustomEvent('player-channel', {
+        detail: message
+      }))
     })
 
-    // 同时保存到全局和本地
-    globalSubscriptions.value.set(`room_${roomId}`, subscription)
-    subscriptions.value.set(`room_${roomId}`, subscription)
+    globalSubscriptions.value.set(subscriptionKey, subscription)
+    subscriptions.value.set(subscriptionKey, subscription)
     return subscription
   }
 
@@ -317,125 +365,17 @@ export function useWebSocket(roomId) {
       console.log(`[WebSocket] 取消订阅: ${key}`)
     }
   }
+  /*
+    房间模块函数 END
+  */
 
-  // 发起匹配请求
-  const sendMatchRequest = (matchData) => {
-    if (!stompClient.value?.connected) {
-      console.error('WebSocket未连接，无法发起匹配')
-      return
-    }
 
-    stompClient.value.publish({
-      destination: '/app/matchmaking/queue',
-      body: JSON.stringify({
-        ...matchData,
-        timestamp: Date.now()
-      })
-    })
-  }
-  
-  // 发起取消匹配请求
-  const sendCancelMatchRequest = (matchData) => {
-    if (!stompClient.value?.connected) {
-      console.error('WebSocket未连接，无法发起取消匹配')
-      return
-    }
 
-    stompClient.value.publish({
-      destination: '/app/matchmaking/cancel',
-      body: JSON.stringify({ 
-        ...matchData, 
-        timestamp: Date.now() 
-      })
-    })
-  }
-
-  // 订阅个人房间信息
-  const subscribeToRoomInfo = (playerId) => {
-    const subscriptionKey = `room_info_${playerId}`
-    
-    if (globalSubscriptions.value.has(subscriptionKey)) {
-      console.log(`[RoomInfo] 复用现有订阅: ${subscriptionKey}`)
-      return globalSubscriptions.value.get(subscriptionKey)
-    }
-    
-    if (!stompClient.value?.connected) {
-      console.error('WebSocket未连接，无法订阅房间信息')
-      return
-    }
-
-    console.log(`[RoomInfo] 开始订阅房间信息: /queue/room/${playerId}/info`)
-    
-    const subscription = stompClient.value.subscribe(`/queue/room/${playerId}/info`, (response) => {
-      const message = JSON.parse(response.body)
-      console.log('[RoomInfo] 收到房间信息:', message)
-      
-      if (message.type === "GAME_INFO") {
-        console.log('[RoomInfo] 房间详情:', {
-          room: {
-            id: message.roomId,
-            status: message.roomStatus,
-            playersCount: message.playersCount,
-            targetText: message.targetText,
-            startTime: message.startTime
-          },
-          opponent: {
-            name: message.opponentName,
-            id: message.opponentId,
-            avatar: message.opponentAvatar
-          },
-          myInfo: {
-            name: message.playerName,
-            id: message.playerId,
-            avatar: message.playerAvatar,
-            isHost: message.isHost
-          },
-          gameInfo: {
-            language: message.language,
-            category: message.category,
-            difficulty: message.difficulty
-          }
-        })
-
-        // 触发自定义事件，传递消息内容
-        window.dispatchEvent(new CustomEvent('room-info', {
-          detail: message
-        }))
-      }
-
-      if (message.type === "PLAYER_READY") {
-        window.dispatchEvent(new CustomEvent('player-ready', {
-          detail: message
-        }))
-      }
-    })
-
-    globalSubscriptions.value.set(subscriptionKey, subscription)
-    return subscription
-  }
-
-  // 请求房间信息的函数
-  const requestRoomInfo = (roomId, playerId, playerName) => {
-    if (!stompClient.value?.connected) {
-      console.error('WebSocket未连接，无法请求房间信息')
-      return
-    }
-
-    console.log(`[RoomInfo] 请求房间信息: roomId=${roomId}, playerId=${playerId}`)
-    
-    stompClient.value.publish({  // 使用 publish 替换 send
-      destination: `/app/room/${roomId}/info`,  // 添加 /app 前缀
-      body: JSON.stringify({
-        type: "REQUEST_ROOM_INFO",
-        roomId: roomId,
-        playerId: playerId,
-        playerName: playerName,
-        timestamp: Date.now()
-      })
-    })
-  }
-
-  // 添加统一的订阅管理函数
+  /*
+    订阅管理模块函数 START
+    @Author: hiddenSharp429(zixian zhu)
+  */
+  // 获取订阅
   const getSubscription = (key) => {
     return globalSubscriptions.value.get(key)
   }
@@ -447,6 +387,9 @@ export function useWebSocket(roomId) {
   const setSubscription = (key, subscription) => {
     globalSubscriptions.value.set(key, subscription)
   }
+  /*
+    订阅管理模块函数 END
+  */
 
   return {
     stompClient,
@@ -463,9 +406,8 @@ export function useWebSocket(roomId) {
     sendMatchRequest,
     sendCancelMatchRequest,
     unsubscribe,
-    subscribeToRoom,
-    subscribeToRoomInfo,
-    requestRoomInfo,
+    subscribeToRoomBroadcast,
+    subscribeToPlayerChannel,
     getSubscription,
     hasSubscription,
     setSubscription
