@@ -134,6 +134,24 @@ onMounted(async () => {
     handleRoomInfo(event.detail)
   })
 
+  window.addEventListener('game-start', (event) => {
+    console.log('[GameRoom] 收到游戏开始事件:', event.detail)
+    showCountdown.value = true
+    countdown.value = 3
+    
+    // 开始倒计时
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        clearInterval(timer)
+        showCountdown.value = false
+        gameStatus.value = 'playing'
+        // 重置游戏统计
+        resetStats()
+      }
+  }, 1000)
+})
+
   window.addEventListener('keydown', handleKeyboardShortcut)
 })
 

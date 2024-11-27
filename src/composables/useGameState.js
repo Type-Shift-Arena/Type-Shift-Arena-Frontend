@@ -134,14 +134,34 @@ export function useGameState(roomId, stompClient) {
     }
 
     if (message.type === 'GAME_START') {
-      // 只处理游戏开始必需的信息
+      console.log('[GameState] 处理游戏开始消息:', message)
+      
+      // 更新游戏状态
+      gameStatus.value = 'playing'
+      
+      // 更新目标文本
       if (message.targetText) {
         targetText.value = message.targetText
       }
-      if (message.roomStatus) {
-        gameStatus.value = message.roomStatus
+      
+      // 重置玩家状态
+      myInfo.value = {
+        ...myInfo.value,
+        isReady: false  // 重置准备状态
       }
-      // 可以添加开始时间等其他必要信息
+      
+      opponentInfo.value = {
+        ...opponentInfo.value,
+        isReady: false  // 重置准备状态
+      }
+      
+      // 触发游戏开始事件
+      window.dispatchEvent(new CustomEvent('game-start', {
+        detail: {
+          targetText: message.targetText,
+          startTime: new Date().getTime()
+        }
+      }))
     }
   }
 
