@@ -389,13 +389,6 @@
         if (animationFrame) {
           cancelAnimationFrame(animationFrame)
         }
-        // 取消所有订阅
-        // if (matchmakingSubscription) {
-        //   matchmakingSubscription.unsubscribe()
-        // }
-        // // 使用 unsubscribe 方法清理所有相关订阅
-        // unsubscribe(`room_${roomId}`)  // 房间广播订阅
-        // unsubscribe(`room_info_${playerId}`)  // 个人房间信息订阅
       })
     })
   })

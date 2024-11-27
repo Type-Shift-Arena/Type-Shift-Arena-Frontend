@@ -50,7 +50,18 @@
           component: GameLobby,
           meta: { requiresAuth: true }
         },
-        //{
+        {
+          path: 'typing-practice',
+          name: 'typingPractice',
+          component: () => import('@/components/TypingPractice.vue')
+        }
+        // {
+        //   path: 'game-lobby',
+        //   name: 'gameLobby',
+        //   component: () => import('@/components/GameLobby.vue'),
+        //   meta: { requiresAuth: true }
+        // },
+        // {
         //   path: 'game-room/:id',
         //   name: 'gameRoom',
         //   component: () => import('@/components/GameRoom.vue'),
