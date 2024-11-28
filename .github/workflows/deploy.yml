@@ -54,4 +54,4 @@ jobs:
         sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "rm -rf /opt/1panel/apps/openresty/openresty/www/sites/typeshiftarena.online/index/*"
         
         echo "Copying new files..."
-        sshpass -p "$SSH_PASSWORD" rsync -avz -e "ssh -o StrictHostKeyChecking=no" dist/ $SERVER_USER@$SERVER_HOST:/opt/1panel/apps/openresty/openresty/www/sites/typeshiftarena.online/index
+        sshpass -p "$SSH_PASSWORD" rsync -avz --no-times --no-perms --no-owner --no-group -e "ssh -o StrictHostKeyChecking=no" dist/ $SERVER_USER@$SERVER_HOST:/opt/1panel/apps/openresty/openresty/www/sites/typeshiftarena.online/index
