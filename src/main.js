@@ -20,3 +20,7 @@ if (token) {
 const app = createApp(App)
 app.use(router)
 app.mount('#app')
+
+console.log('Current Environment:', import.meta.env.MODE)
+console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL)
+console.log('WebSocket URL:', import.meta.env.VITE_WS_URL)

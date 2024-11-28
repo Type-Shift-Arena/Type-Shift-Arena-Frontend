@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { Client } from '@stomp/stompjs'
 import { useRouter } from 'vue-router'
-import { API_BASE_URL } from '@/config'
+import { WS_URL } from '@/config'
 
 // 添加全局连接状态管理
 const globalStompClient = ref(null)
@@ -40,9 +40,7 @@ export function useWebSocket(roomId) {
 
         connectionStatus.value = '正在连接...'
         
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-        const wsUrl = `${wsProtocol}//${window.location.hostname}:9090/ws`
-        const ws = new WebSocket(wsUrl)
+        const ws = new WebSocket(WS_URL)
         
         setupWebSocketHandlers(ws)
         
