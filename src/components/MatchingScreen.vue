@@ -315,7 +315,7 @@
     
     // 重置匹配请求状态
     isMatchRequestPending.value = false
-    
+
     // 开始新的倒计时
     countdownTimer = setInterval(() => {
       countdown.value--
@@ -350,6 +350,7 @@
       category: props.matchingOptions.category,
       difficulty: props.matchingOptions.difficulty
     })
+    
     isMatchRequestPending.value = false
     emit('cancel')
   }
