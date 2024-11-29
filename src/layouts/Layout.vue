@@ -2,7 +2,7 @@
  * @Author: hiddenSharp429 z404878860@163.com
  * @Date: 2024-10-28 20:13:49
  * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-29 16:09:52
+ * @LastEditTime: 2024-11-29 17:01:08
 -->
 <script setup>
 import { store } from '../stores/store';
@@ -13,6 +13,8 @@ import { ElNotification } from 'element-plus';
 
 const router = useRouter()
 const isLoggedIn = toRef(store, 'isLoggedIn');
+const avatarUrl = toRef(store, 'avatarUrl');
+const nickname = toRef(store, 'nickname');
 
 const logout = () => {
   localStorage.removeItem('token')
@@ -41,8 +43,16 @@ const logout = () => {
           </template>
           <template v-else>
             <router-link to="/game-lobby">游戏大厅</router-link>
-            <router-link to="/personal">个人中心</router-link>
-            <a @click="logout" class="logout-btn">退出</a>
+            <router-link to="/personal">
+              <div class="user-info">
+                <div class="user-avatar">
+                  <img id="userAvatar" :src="avatarUrl" :alt="nickname" />
+                </div>
+                <span class="user-nickname">{{ nickname }}</span>
+              </div>
+            </router-link>
+
+            <a @click="logout" class="logout-btn">注销</a>
             <router-link to="/settings" class="settings-link">
               <span class="material-icons">settings</span>
             </router-link>
@@ -191,5 +201,27 @@ nav {
   display: flex;
   align-items: center;
   gap: 20px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  position: relative;
+}
+
+.user-avatar img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #6f6f6f;
+}
+
+.user-nickname {
+  color: #fff;
+  font-weight: bold;
 }
 </style>

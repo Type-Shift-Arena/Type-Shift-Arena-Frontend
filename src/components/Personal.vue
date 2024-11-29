@@ -1,7 +1,9 @@
 <script>
 import gifImg from '@/assets/images/merged.gif';
 import axios from 'axios';
-import { API_BASE_URL } from '@/config'
+import { API_BASE_URL, IMG_BB_API_KEY } from '@/config'
+import {store} from "../stores/store.js";
+import { ElNotification } from 'element-plus';
 
 export default {
   name: 'MyComponent',
@@ -74,6 +76,7 @@ export default {
     triggerFileInput() {
       // 触发文件输入元素的点击事件
       this.$refs.fileInput.click();
+      console.log(1)
     },
 
     async handleFileChange(event){
@@ -83,11 +86,105 @@ export default {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = (e) => {
-          this.imgSrc = e.target.result;
+          this.userInfo.imgSrc = e.target.result;
         };
-         
+        await this.handleAvatarUpload(file);
       }
     },
+
+    async handleAvatarUpload(file) {
+      if (!file || !this.userId) return;
+      
+      try {
+        this.userInfo.imgSrc = URL.createObjectURL(file);
+        
+        const formData = new FormData();
+        formData.append('image', file);
+
+        console.log('Uploading file:', file.name, file.type, file.size);
+        ElNotification({
+          title: '上传头像文件中',
+          message: `Uploading file: ${file.name}, ${file.type}, ${file.size}`,
+          type: 'info',
+          duration: 4000,
+        });
+
+        const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMG_BB_API_KEY}`, {
+          method: 'POST',
+          body: formData,
+          headers: {
+              'Accept': 'application/json'
+          }
+        });
+
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Upload failed:', response.status, errorText);
+          ElNotification({
+            title: '上传头像失败',
+            message: `Upload failed: ${response.status}, ${errorText}`,
+            type: 'error',
+            duration: 3000,
+          });
+          throw new Error(`Upload failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        console.log(data)
+
+        if (data.success) {
+          ElNotification({
+            title: '上传图床成功',
+            message: `Upload success: ${data.data.status}, ${data.data.url}`,
+            type: 'success',
+            duration: 1500,
+          });
+
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          ElNotification.closeAll();
+          ElNotification({
+            title: '更新头像URL中',
+            message: 'Updating imgSrc',
+            type: 'info',
+            duration: 2000,
+          });
+
+          const backend_response = await fetch(`${API_BASE_URL}/users/${this.userId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ...this.userInfo,
+              imgSrc: data.data.url
+            })
+          })
+
+          const backend_data = await backend_response.json()
+          console.log(backend_data.id)
+          // 更新localStorage中的imgSrc
+          localStorage.setItem('imgSrc', backend_data.imgSrc)
+          store.avatarUrl = backend_data.imgSrc
+          ElNotification({
+            title: '更新头像URL成功',
+            message: 'Update imgSrc success',
+            type: 'success',
+            duration: 1500,
+          });
+        } 
+        else {
+            throw new Error('Upload failed: ' + (data.error?.message || 'Unknown error'));
+        }
+      } 
+      catch (error) {
+        console.error('头像上传失败:', error);
+        alert('头像上传失败，请重试');
+      }
+    },
+
     
     friendlist() {
       this.$router.push('/friend-list');
@@ -208,9 +305,9 @@ export default {
 
         <div class="left">
           <!-- @click="triggerFileInput" -->
-          <img :src="userInfo.imgSrc">
+          <img :src="userInfo.imgSrc" @click="triggerFileInput">
           <!-- @change="handleFileChange" -->
-          <input type="file" ref="fileInput" style="display: none;">
+          <input type="file" ref="fileInput" style="display: none;" @change="handleFileChange">
         </div>
 
         <div class="middle">
