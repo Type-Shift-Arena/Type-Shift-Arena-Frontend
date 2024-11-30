@@ -3,8 +3,9 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import soundManager from '@/utils/SoundManager'
 import { SOUND_ASSETS } from '@/config/soundAssets'
+import { setLocale } from '@/i18n'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const activeTab = ref('sound')
 
 // 匹配按钮（狙击镜）音效设置
@@ -19,8 +20,8 @@ const scopeClickSound = ref({
 })
 
 const tabs = [
-  { id: 'sound', label: '声音设置', icon: 'volume_up' },
-  { id: 'language', label: '语言设置', icon: 'language' },
+  { id: 'sound', label: t('settings.sound.title'), icon: 'volume_up' },
+  { id: 'language', label: t('settings.language.title'), icon: 'language' },
 ]
 
 // 预览打字音效
@@ -64,7 +65,7 @@ const updateScopeClickSound = (key, value) => {
 
 // 语言切换函数
 const switchLanguage = (newLang) => {
-  locale.value = newLang
+  setLocale(newLang)
 }
 </script>
 
@@ -85,15 +86,15 @@ const switchLanguage = (newLang) => {
     <div class="settings-content">
       <!-- 声音设置面板 -->
       <div v-if="activeTab === 'sound'" class="settings-panel">
-        <h2>声音设置</h2>
+        <h2>{{ t('settings.sound.title') }}</h2>
         
         <!-- 打字音效设置 -->
         <div class="setting-group">
-          <h3>打字音效</h3>
+          <h3>{{ t('settings.sound.typingSound') }}</h3>
           <div class="setting-item">
             <label class="setting-label">
               <span class="material-icons">keyboard</span>
-              启用打字音效
+              {{ t('settings.sound.enable') }}
             </label>
             <div class="setting-controls">
               <label class="switch">
@@ -120,13 +121,13 @@ const switchLanguage = (newLang) => {
                 :disabled="!soundManager.isEnabled()"
               >
                 <span class="material-icons">play_circle</span>
-                试听
+                {{ t('settings.sound.preview') }}
               </button>
             </div>
           </div>
 
           <div class="setting-item">
-            <label class="setting-label">音效类型</label>
+            <label class="setting-label">{{ t('settings.sound.typingSoundType') }}</label>
             <div class="setting-controls">
               <select 
                 :value="soundManager.getCurrentSound()"
@@ -147,13 +148,13 @@ const switchLanguage = (newLang) => {
 
         <!-- 匹配按钮（狙击镜）音效设置 -->
         <div class="setting-group">
-          <h3>匹配按钮（狙击镜）音效</h3>
+          <h3>{{ t('settings.sound.scopeTitle') }}</h3>
           
           <!-- 聚焦音效设置 -->
           <div class="setting-item">
             <label class="setting-label">
               <span class="material-icons">center_focus_strong</span>
-              聚焦音效
+              {{ t('settings.sound.scopeHoverSound') }}
             </label>
             <div class="setting-controls">
               <label class="switch">
@@ -180,7 +181,7 @@ const switchLanguage = (newLang) => {
                 :disabled="!scopeHoverSound.enabled"
               >
                 <span class="material-icons">play_circle</span>
-                试听
+                {{ t('settings.sound.preview') }}
               </button>
             </div>
           </div>
@@ -189,7 +190,7 @@ const switchLanguage = (newLang) => {
           <div class="setting-item">
             <label class="setting-label">
               <span class="material-icons">gps_fixed</span>
-              点击音效
+              {{ t('settings.sound.scopeClickSound') }}
             </label>
             <div class="setting-controls">
               <label class="switch">
@@ -216,7 +217,7 @@ const switchLanguage = (newLang) => {
                 :disabled="!scopeClickSound.enabled"
               >
                 <span class="material-icons">play_circle</span>
-                试听
+                {{ t('settings.sound.preview') }}
               </button>
             </div>
           </div>
@@ -225,20 +226,20 @@ const switchLanguage = (newLang) => {
 
       <!-- 语言设置面板 -->
       <div v-if="activeTab === 'language'" class="settings-panel">
-        <h2>语言设置</h2>
+        <h2>{{ t('settings.language.title') }}</h2>
         <div class="setting-group">
           <div class="setting-item">
             <label class="setting-label">
               <span class="material-icons">language</span>
-              界面语言
+              {{ t('settings.language.interfaceLanguage') }}
             </label>
             <div class="setting-controls">
               <select 
                 :value="locale"
                 @change="e => switchLanguage(e.target.value)"
               >
-                <option value="zh">中文</option>
-                <option value="en">English</option>
+                <option value="zh">{{ t('settings.language.chinese') }}</option>
+                <option value="en">{{ t('settings.language.english') }}</option>
               </select>
             </div>
           </div>
