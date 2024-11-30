@@ -1,12 +1,15 @@
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import soundManager from '@/utils/SoundManager'
 import { SOUND_ASSETS } from '@/config/soundAssets'
 
+const { locale } = useI18n()
 const activeTab = ref('sound')
 
 const tabs = [
   { id: 'sound', label: '声音设置', icon: 'volume_up' },
+  { id: 'language', label: '语言设置', icon: 'language' },
   // 预留其他设置选项卡
   // { id: 'display', label: '显示设置', icon: 'display_settings' },
   // { id: 'account', label: '账号设置', icon: 'person' },
@@ -25,6 +28,11 @@ const previewSound = () => {
       soundManager.playTypeSound()
     }, i * 100)
   }
+}
+
+// 语言切换函数
+const switchLanguage = (newLang) => {
+  locale.value = newLang
 }
 </script>
 
@@ -88,6 +96,28 @@ const previewSound = () => {
                 <span class="material-icons">play_circle</span>
                 试听
               </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 语言设置面板 -->
+      <div v-if="activeTab === 'language'" class="settings-panel">
+        <h2>语言设置</h2>
+        <div class="setting-group">
+          <div class="setting-item">
+            <label class="setting-label">
+              <span class="material-icons">language</span>
+              界面语言
+            </label>
+            <div class="setting-controls">
+              <select 
+                :value="locale"
+                @change="e => switchLanguage(e.target.value)"
+              >
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+              </select>
             </div>
           </div>
         </div>
