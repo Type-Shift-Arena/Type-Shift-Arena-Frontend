@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { API_BASE_URL } from '@/config'
 import axios from 'axios'
+import { store } from '../stores/store'
+import { ElNotification } from 'element-plus';
 
 const router = useRouter()
 const isRightPanelActive = ref(false)
@@ -46,21 +48,37 @@ const doSignIn = async () => {
       console.log(data)
       localStorage.setItem('token', data.token)
       localStorage.setItem('userName', data.username)
-      // 设置全局 axios 默认 header
+      localStorage.setItem('userId', data.userId)
+      localStorage.setItem('imgSrc', data.imgSrc)
       axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+      store.isLoggedIn = true
       router.push('/')
     } else {
-      alert(data.message || '登录失败')
+      ElNotification({
+        title: '登录失败',
+        message: data.message,
+        type: 'error',
+        duration: 1500,
+      });
     }
   } catch (error) {
     console.error('Login failed:', error)
-    alert('登录失败，请稍后重试')
+    ElNotification({
+        title: '登录失败，请稍后再试',
+        message: error,
+        type: 'error',
+        duration: 1500,
+    });
   }
 }
 
 const doSignUp = async () => {
   if (signup.value.password !== signup.value.password_confirm) {
-    alert('两次输入的密码不一致')
+    ElNotification({
+        title: '两次输入的密码不一致',
+        type: 'error',
+        duration: 1500,
+    });
     return
   }
   try {
@@ -77,14 +95,31 @@ const doSignUp = async () => {
     })
     const data = await response.json()
     if (response.ok) {
-      alert('注册成功，请登录')
-      signIn() // 切换到登录面板
-    } else {
-      alert(data.message || '注册失败')
+      ElNotification({
+        title: '注册成功',
+        message: '您已成功注册，正在自动登录',
+        type: 'success',
+        duration: 1500,
+      });
+      signin.value.username = signup.value.username
+      signin.value.password = signup.value.password
+      await doSignIn()
+    }else {
+      ElNotification({
+        title: '注册失败',
+        message: data.message,
+        type: 'error',
+        duration: 1500,
+      });
     }
   } catch (error) {
     console.error('Registration failed:', error)
-    alert('注册失败，请稍后重试')
+    ElNotification({
+        title: '注册失败，请稍后重试',
+        message: error,
+        type: 'error',
+        duration: 1500,
+    });
   }
 }
 </script>
