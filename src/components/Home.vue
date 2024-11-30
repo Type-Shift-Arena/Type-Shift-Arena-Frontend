@@ -1,41 +1,44 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 
-const router = useRouter()
-const isLoggedIn = ref(false)
-const testRoomId = ref('')
-const isDev = computed(() => import.meta.env.DEV)
+const router = useRouter();
+const { t } = useI18n();
+
+const isLoggedIn = ref(false);
+const testRoomId = ref('');
+const isDev = computed(() => import.meta.env.DEV);
 
 onMounted(() => {
-  isLoggedIn.value = !!localStorage.getItem('token')
-})
+  isLoggedIn.value = !!localStorage.getItem('token');
+});
 
 const startGame = () => {
   if (isLoggedIn.value) {
-    router.push('/game-lobby')
+    router.push('/game-lobby');
   } else {
-    router.push('/auth')
+    router.push('/auth');
   }
-}
+};
 
 const testGame = () => {
-  const roomId = Math.random().toString(36).substring(7)
-  testRoomId.value = roomId  // 保存房间ID以便复制
+  const roomId = Math.random().toString(36).substring(7);
+  testRoomId.value = roomId;  // 保存房间ID以便复制
   router.push({
     name: 'testRoom',
     params: { id: roomId }
-  })
-}
+  });
+};
 
 const joinTestRoom = () => {
   if (testRoomId.value) {
     router.push({
       name: 'testRoom',
       params: { id: testRoomId.value }
-    })
+    });
   } else {
-    alert('请输入房间ID')
+    alert(t('home.enterRoomId'));
   }
 }
 
@@ -43,47 +46,49 @@ const joinTestRoom = () => {
 const startTypingPractice = () => {
   router.push('/typing-practice')
 }
+
 </script>
 
 <template>
   <div class="home">
     <div class="hero">
-      <h1>在线打字对战</h1>
-      <p>提升你的打字速度，挑战其他玩家！</p>
+      <h1>{{ $t('home.title') }}</h1>
+      <p>{{ $t('home.description') }}</p>
       <div class="button-group">
         <button @click="startGame" class="cta-button">
-          {{ isLoggedIn ? '开始游戏' : '立即登录' }}
+          {{ isLoggedIn ? $t('home.startGame') : $t('home.login') }}
         </button>
         <button @click="testGame" class="test-button">
-          测试游戏
+          {{ $t('home.testGame') }}
+        </button>
+        <button @click="switchLanguage" class="language-button">
+          {{ $t('home.switchLanguage') }}
         </button>
       </div>
     </div>
 
     <div class="features">
       <div class="feature">
-        <h3>实时对战</h3>
-        <p>与其他玩家实时对战，体验紧张刺激的打字比赛</p>
+        <h3>{{ $t('home.realTimeBattle') }}</h3>
+        <p>{{ $t('home.realTimeBattleDescription') }}</p>
       </div>
       <div class="feature">
-
         <button @click="startTypingPractice" class="practice-button">
-        技能提升
-      </button>
-        <p>通过练习提高打字速度和准确率</p>
+        {{ $t('home.skillImprovement') }}
+        </button>
         <!-- 将“技能提升”字样改造成跳转按钮 -->
-
+        <p>{{ $t('home.skillImprovementDescription') }}</p>
       </div>
       <div class="feature">
-        <h3>排行榜</h3>
-        <p>查看自己在全球玩家中的排名</p>
+        <h3>{{ $t('home.leaderboard') }}</h3>
+        <p>{{ $t('home.leaderboardDescription') }}</p>
       </div>
     </div>
 
     <div class="test-buttons" v-if="isDev">
-      <button @click="testGame">创建测试房间</button>
-      <button @click="joinTestRoom">加入测试房间</button>
-      <input v-model="testRoomId" placeholder="输入房间ID" />
+      <button @click="testGame">{{ $t('home.createTestRoom') }}</button>
+      <button @click="joinTestRoom">{{ $t('home.joinTestRoom') }}</button>
+      <input v-model="testRoomId" :placeholder="$t('home.enterRoomId')" />
     </div>
   </div>
 </template>
@@ -190,4 +195,20 @@ const startTypingPractice = () => {
   border: 1px solid #ddd;
   border-radius: 4px;
 }
+
+
+.language-button {
+  background-color: #7f8c8d;
+  color: white;
+  padding: 0.8rem 2rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.language-button:hover {
+  background-color: #8e9eab;
+}
+
 </style>

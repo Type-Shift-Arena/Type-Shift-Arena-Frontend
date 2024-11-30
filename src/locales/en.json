@@ -1,0 +1,19 @@
+{
+  "home": {
+    "title": "Online Typing Battle",
+    "description": "Improve your typing speed and challenge other players!",
+    "startGame": "Start Game",
+    "login": "Log In",
+    "testGame": "Test Game",
+    "realTimeBattle": "Real-Time Battle",
+    "realTimeBattleDescription": "Compete with other players in real-time for an exciting typing experience",
+    "skillImprovement": "Skill Improvement",
+    "skillImprovementDescription": "Enhance your typing speed and accuracy through practice",
+    "leaderboard": "Leaderboard",
+    "leaderboardDescription": "View your ranking among global players",
+    "createTestRoom": "Create Test Room",
+    "joinTestRoom": "Join Test Room",
+    "enterRoomId": "Enter Room ID",
+    "switchLanguage": "Switch Language"
+  }
+}
