@@ -1,0 +1,56 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: Deploy
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org/'
+
+    - name: Remove existing .npmrc
+      run: rm -f .npmrc || true
+
+    - name: Configure npm
+      run: |
+        echo "registry=https://registry.npmjs.org/" > .npmrc
+        echo "strict-ssl=false" >> .npmrc
+        npm config list
+
+    - name: Clean npm cache
+      run: npm cache clean --force
+
+    - name: Install dependencies
+      run: npm install --registry=https://registry.npmjs.org/ --no-package-lock
+      
+    - name: Build project
+      run: npm run build
+
+    - name: Deploy to server
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_PATH: ${{ secrets.SERVER_PATH }}
+        SUDO_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      run: |
+        echo "Testing SSH connection..."
+        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "echo 'SSH connection successful'"
+        
+        echo "Removing old files..."
+        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "rm -rf /opt/1panel/apps/openresty/openresty/www/sites/typeshiftarena.online/index/*"
+        
+        echo "Copying new files..."
+        sshpass -p "$SSH_PASSWORD" rsync -avz --no-times --no-perms --no-owner --no-group -e "ssh -o StrictHostKeyChecking=no" dist/ $SERVER_USER@$SERVER_HOST:/opt/1panel/apps/openresty/openresty/www/sites/typeshiftarena.online/index

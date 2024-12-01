@@ -1,9 +1,3 @@
-<!--
- * @Author: hiddenSharp429 z404878860@163.com
- * @Date: 2024-10-28 19:44:56
- * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-10-28 20:21:06
--->
 <template>
   <router-view></router-view>
 </template>
