@@ -132,5 +132,4 @@ const startTypingPractice = () => {
 .practice-button {
   font-size: 1.2rem; /* 增大字体大小 */
 }
-
 </style>
