@@ -1,0 +1,19 @@
+{
+  "home": {
+    "title": "在线打字对战",
+    "description": "提升你的打字速度，挑战其他玩家！",
+    "startGame": "开始游戏",
+    "login": "立即登录",
+    "testGame": "测试游戏",
+    "realTimeBattle": "实时对战",
+    "realTimeBattleDescription": "与其他玩家实时对战，体验紧张刺激的打字比赛",
+    "skillImprovement": "技能提升",
+    "skillImprovementDescription": "通过练习提高打字速度和准确率",
+    "leaderboard": "排行榜",
+    "leaderboardDescription": "查看自己在全球玩家中的排名",
+    "createTestRoom": "创建测试房间",
+    "joinTestRoom": "加入测试房间",
+    "enterRoomId": "输入房间ID",
+    "switchLanguage": "切换语言"
+  }
+}
