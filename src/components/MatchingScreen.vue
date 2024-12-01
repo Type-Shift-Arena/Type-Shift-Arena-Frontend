@@ -427,6 +427,23 @@
             difficulty: props.matchingOptions.difficulty
           })
         }
+        
+        // 组件卸载时清理
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame)
+        }
+        if (countdownTimer) {
+          clearInterval(countdownTimer)
+        }
+        // 清理匹配订阅
+        if (matchmakingSubscription) {
+          matchmakingSubscription.unsubscribe()
+          matchmakingSubscription = null
+        }
+        // 重置状态
+        matchFound.value = false
+        countdown.value = 5
+        isMatchRequestPending.value = false
       })
     })
   })

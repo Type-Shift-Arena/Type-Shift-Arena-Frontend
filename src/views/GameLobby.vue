@@ -146,6 +146,11 @@ const startMatching = () => {
 
 const cancelMatching = () => {
   isMatching.value = false
+  const playerId = localStorage.getItem('userId')
+  if (subscriptions.value.has(`matchmaking_${playerId}`)) {
+    subscriptions.value.get(`matchmaking_${playerId}`).unsubscribe()
+    subscriptions.value.delete(`matchmaking_${playerId}`)
+  }
 }
 </script>
 

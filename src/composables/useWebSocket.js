@@ -164,16 +164,39 @@ export function useWebSocket(roomId) {
 
   // 断开连接
   const disconnect = () => {
-    // 清理所有订阅
-    subscriptions.value.forEach((subscription, key) => {
-      subscription.unsubscribe()
-      console.log(`[WebSocket] 已取消订阅: ${key}`)
-    })
-    subscriptions.value.clear()
+    try {
+      // 清理所有订阅
+      subscriptions.value.forEach((subscription, key) => {
+        subscription.unsubscribe()
+        console.log(`[WebSocket] 已取消订阅: ${key}`)
+      })
+      subscriptions.value.clear()
 
-    if (stompClient.value?.connected) {
-      stompClient.value.deactivate()
-      console.log('[WebSocket] 已断开连接')
+      // 清理全局订阅
+      globalSubscriptions.value.forEach((subscription, key) => {
+        subscription.unsubscribe()
+        console.log(`[WebSocket] 已取消全局订阅: ${key}`)
+      })
+      globalSubscriptions.value.clear()
+
+      if (stompClient.value?.connected) {
+        stompClient.value.deactivate()
+        console.log('[WebSocket] 已断开连接')
+      }
+
+      // 清理全局客户端
+      if (globalStompClient.value?.connected) {
+        globalStompClient.value.deactivate()
+        globalStompClient.value = null
+        console.log('[WebSocket] 已断开全局连接')
+      }
+
+      // 重置连接状态
+      connectionStatus.value = '未连接'
+      stompClient.value = null
+    } catch (error) {
+      console.error('[WebSocket] 断开连接时发生错误:', error)
+      throw error
     }
   }
   /* 

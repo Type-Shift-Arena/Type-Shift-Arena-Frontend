@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useWebSocket } from '@/composables/useWebSocket'
 import { useGameState } from '@/composables/useGameState'
 import { usePlayerStats } from '@/composables/usePlayerStats'
@@ -9,6 +9,7 @@ import StatusBar from '@/components/GameRoom/StatusBar.vue'
 import GameArea from '@/components/GameRoom/GameArea.vue'
 
 const route = useRoute()
+const router = useRouter()
 const roomId = route.params.id
 
 // WebSocket 相关
@@ -42,7 +43,8 @@ const {
   handleRoomInfo,
   toggleReady,
   requestRoomInfo,
-  finishGame
+  finishGame,
+  leaveRoom
 } = useGameState(roomId, stompClient)
 
 // 玩家统计相关
@@ -197,8 +199,11 @@ onUnmounted(() => {
     subscriptions.value.get(`player_channel_${playerId}`).unsubscribe()
     subscriptions.value.delete(`player_channel_${playerId}`)
   }
-  window.removeEventListener('game-progress', handleGameProgress)
-  window.removeEventListener('game-finish', handleGameFinish)
+
+  if (subscriptions.value.has(`matchmaking_${playerId}`)) {
+    subscriptions.value.get(`matchmaking_${playerId}`).unsubscribe()
+    subscriptions.value.delete(`matchmaking_${playerId}`)
+  }
 })
 
 // 处理输入
@@ -209,6 +214,18 @@ const handleGameInput = (event) => {
   // 如果完成了游戏
   if (isCompleted) {
     gameStatus.value = 'finished'
+  }
+}
+
+// 处理离开房间
+const handleLeaveRoom = async () => {
+  try {
+    // 先断开WebSocket连接
+    await disconnect()
+    // 然后调用离开房间逻辑
+    await leaveRoom(stompClient.value, subscriptions.value, router)
+  } catch (error) {
+    console.error('离开房间失败:', error)
   }
 }
 </script>
@@ -226,7 +243,10 @@ const handleGameInput = (event) => {
       <!-- 添加房间信息 -->
       <div v-if="isDev" class="room-info">
         <p>房间ID: {{ roomId }}</p>
-        <button @click="copyRoomUrl">复制房间链接</button>
+        <div class="room-controls">
+          <button @click="copyRoomUrl">复制房间链接</button>
+          <button @click="handleLeaveRoom" class="leave-btn">离开房间</button>
+        </div>
       </div>
     
 
@@ -342,27 +362,13 @@ const handleGameInput = (event) => {
   background: #3aa876;
 }
 
-.connection-status {
-  padding: 0.5rem;
-  margin: 0.5rem 0;
-  border-radius: 4px;
-  text-align: center;
-  font-weight: bold;
+.leave-btn {
+  margin-left: 1rem;
+  background-color: brown !important;
 }
 
-.connection-status.已连接 {
-  background: #42b983;
-  color: white;
-}
-
-.connection-status.正在连接 {
-  background: #e6a23c;
-  color: white;
-}
-
-.connection-status.连接错误, .connection-status.已断开 {
-  background: #f56c6c;
-  color: white;
+.leave-btn:hover {
+  background-color: rgb(150, 0, 0) !important;
 }
 
 .countdown-overlay {
