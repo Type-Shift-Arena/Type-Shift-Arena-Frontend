@@ -6,6 +6,7 @@ import { useGameState } from '@/composables/useGameState'
 import { usePlayerStats } from '@/composables/usePlayerStats'
 import DebugPanel from '@/components/GameRoom/DebugPanel.vue'
 import StatusBar from '@/components/GameRoom/StatusBar.vue'
+import GameArea from '@/components/GameRoom/GameArea.vue'
 
 const route = useRoute()
 const roomId = route.params.id
@@ -21,9 +22,8 @@ const {
   checkConnection,
   sendTestMessage,
   disconnect,
-  subscribeToRoom,
-  subscribeToRoomInfo,
-  requestRoomInfo,
+  subscribeToRoomBroadcast,
+  subscribeToPlayerChannel,
   subscriptions,
   hasSubscription,
 } = useWebSocket(roomId)
@@ -40,7 +40,9 @@ const {
   myInfo,
   opponentInfo,
   handleRoomInfo,
-  toggleReady
+  toggleReady,
+  requestRoomInfo,
+  finishGame
 } = useGameState(roomId, stompClient)
 
 // 玩家统计相关
@@ -103,35 +105,77 @@ onMounted(async () => {
 
     // 1. 检查并订阅房间广播消息
     if (!hasSubscription(`room_${roomId}`)){
-      console.log('[GameRoom] 订阅房间广播消息')
-      await subscribeToRoom(roomId)
-    } else {
-      console.log('[GameRoom] 已存在房间广播订阅，复用现有订阅')
+      await subscribeToRoomBroadcast(roomId)
     }
 
     // 2. 检查并订阅个人房间信息
-    if (!hasSubscription(`room_info_${playerId}`)) {
-      console.log('[GameRoom] 订阅个人房间信息')
-      await subscribeToRoomInfo(playerId)
-    } else {
-      console.log('[GameRoom] 已存在个人房间信息订阅，复用现有订阅')
+    if (!hasSubscription(`player_channel_${playerId}`)) {
+      await subscribeToPlayerChannel(playerId)
     }
 
     // 3. 请求初始房间信息
     requestRoomInfo(roomId, playerId, playerName)
 
-    // startGame() // 开始游戏
   } catch (error) {
     console.error('[GameRoom] 初始化失败:', error)
   }
-  window.addEventListener('room-info', (event) => {
-    console.log('[GameState] 收到房间信息事件:', event.detail)
+
+  // 监听玩家频道消息
+  window.addEventListener('player-channel', (event) => {
     handleRoomInfo(event.detail)
   })
 
-  window.addEventListener('player-ready', (event) => {
-    console.log('[GameState] 收到玩家准备事件:', event.detail)
+  // 监听房间广播消息
+  window.addEventListener('room-broadcast', (event) => {
     handleRoomInfo(event.detail)
+  })
+
+  // 监听游戏开始事件
+  window.addEventListener('game-start', () => {
+    showCountdown.value = true
+    countdown.value = 3
+    
+    // 开始倒计时
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        clearInterval(timer)
+        showCountdown.value = false
+        gameStatus.value = 'playing'
+        // 重置游戏统计
+        resetStats()
+      }
+    }, 1000)
+  })
+
+  // 监听游戏进度事件
+  window.addEventListener('game-progress', (event) => {
+    const { playerId, percentage, stats } = event.detail
+    // 如果不是自己的进度，则更新对手状态
+    if (playerId !== localStorage.getItem('userId')) {
+      updateOpponentStats({
+        progress: percentage,
+        wpm: stats.wpm,
+        accuracy: stats.accuracy,
+        errorCount: stats.errorCount,
+        username: stats.username
+      })
+    }
+  })
+
+  // 添加游戏结束事件监听
+  window.addEventListener('game-finish', (event) => {
+    const { winnerId } = event.detail
+    gameStatus.value = 'finished'
+    
+    // 可以在这里添加显示获胜者信息的逻辑
+    if (winnerId === localStorage.getItem('userId')) {
+      // 显示胜利信息
+      logGameEvent('你赢了！')
+    } else {
+      // 显示失败信息
+      logGameEvent('对手获胜！')
+    }
   })
 
   window.addEventListener('keydown', handleKeyboardShortcut)
@@ -148,11 +192,25 @@ onUnmounted(() => {
     subscriptions.value.get(`room_${roomId}`).unsubscribe()
     subscriptions.value.delete(`room_${roomId}`)
   }
-  if (subscriptions.value.has(`room_info_${playerId}`)) {
-    subscriptions.value.get(`room_info_${playerId}`).unsubscribe()
-    subscriptions.value.delete(`room_info_${playerId}`)
+ 
+  if (subscriptions.value.has(`player_channel_${playerId}`)) {
+    subscriptions.value.get(`player_channel_${playerId}`).unsubscribe()
+    subscriptions.value.delete(`player_channel_${playerId}`)
   }
+  window.removeEventListener('game-progress', handleGameProgress)
+  window.removeEventListener('game-finish', handleGameFinish)
 })
+
+// 处理输入
+const handleGameInput = (event) => {
+  // 调用 usePlayerStats 中的 handleInput 方法处理输入
+  const isCompleted = handleInput(event, targetText.value, gameStatus.value)
+  
+  // 如果完成了游戏
+  if (isCompleted) {
+    gameStatus.value = 'finished'
+  }
+}
 </script>
 
 <template>
@@ -183,30 +241,12 @@ onUnmounted(() => {
       />
 
       <!-- 游戏区域 -->
-      <div class="game-content">
-        <!-- 目标文本 -->
-        <div class="target-text">
-          <span 
-            v-for="(char, index) in targetText" 
-            :key="index"
-            :class="{
-              'correct': playerText[index] === char,
-              'incorrect': playerText[index] && playerText[index] !== char,
-              'current': playerText.length === index,
-              'space': char === ' '
-            }"
-          >{{ char === ' ' ? '␣' : char }}</span>
-        </div>
-
-        <!-- 输入区域 -->
-        <textarea
-          v-model="playerText"
-          @input="handleInput"
-          :disabled="gameStatus === 'finished'"
-          :placeholder="gameStatus === 'playing' ? '开始输入...' : '等待对手加入...'"
-          class="input-area"
-        ></textarea>
-      </div>
+      <GameArea
+        :target-text="targetText"
+        :game-status="gameStatus"
+        v-model:player-text="playerText"
+        @input="handleGameInput"
+      />
 
       <!-- 游戏状态 -->
       <div class="game-status" v-if="gameStatus !== 'playing'">
@@ -272,44 +312,6 @@ onUnmounted(() => {
   padding: 2rem;
 }
 
-.game-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.target-text {
-  font-size: 1.2rem;
-  line-height: 1.6;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 4px;
-  color: #2c3e50;
-}
-
-.input-area {
-  width: 100%;
-  min-height: 100px;
-  padding: 1rem;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  font-size: 1.2rem;
-  line-height: 1.6;
-  resize: vertical;
-}
-
-.input-area:focus {
-  outline: none;
-  border-color: #42b983;
-}
-
-.input-area:disabled {
-  background: #f8f9fa;
-  cursor: not-allowed;
-}
-
 .game-status {
   text-align: center;
   font-size: 1.5rem;
@@ -361,22 +363,6 @@ onUnmounted(() => {
 .connection-status.连接错误, .connection-status.已断开 {
   background: #f56c6c;
   color: white;
-}
-
-.target-text span.space {
-  /* 为空格字符添加特殊样式 */
-  border-radius: 2px;
-  margin: 0 1px;
-  color: #c7c7c7;
-  font-size: 0.9em;
-}
-
-.target-text span.space.correct {
-  background-color: rgba(66, 185, 131, 0.1);
-}
-
-.target-text span.space.incorrect {
-  background-color: rgba(255, 107, 107, 0.1);
 }
 
 .countdown-overlay {

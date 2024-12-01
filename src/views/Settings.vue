@@ -1,30 +1,71 @@
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import soundManager from '@/utils/SoundManager'
 import { SOUND_ASSETS } from '@/config/soundAssets'
+import { setLocale } from '@/i18n'
 
+const { locale, t } = useI18n()
 const activeTab = ref('sound')
 
+// 匹配按钮（狙击镜）音效设置
+const scopeHoverSound = ref({
+  enabled: localStorage.getItem('scopeHoverSound.enabled') !== 'false',
+  volume: Number(localStorage.getItem('scopeHoverSound.volume')) || 0.5
+})
+
+const scopeClickSound = ref({
+  enabled: localStorage.getItem('scopeClickSound.enabled') !== 'false',
+  volume: Number(localStorage.getItem('scopeClickSound.volume')) || 0.5
+})
+
 const tabs = [
-  { id: 'sound', label: '声音设置', icon: 'volume_up' },
-  // 预留其他设置选项卡
-  // { id: 'display', label: '显示设置', icon: 'display_settings' },
-  // { id: 'account', label: '账号设置', icon: 'person' },
+  { id: 'sound', label: t('settings.sound.title'), icon: 'volume_up' },
+  { id: 'language', label: t('settings.language.title'), icon: 'language' },
 ]
 
-// 添加预览功能
-const previewSound = () => {
-  // 确保音效已启用
-  if (!soundManager.isEnabled()) {
-    return
-  }
+// 预览打字音效
+const previewTypingSound = () => {
+  if (!soundManager.isEnabled()) return
   
-  // 连续播放三次
   for (let i = 0; i < 5; i++) {
     setTimeout(() => {
       soundManager.playTypeSound()
     }, i * 100)
   }
+}
+
+// 预览匹配按钮（狙击镜）聚焦音效
+const previewScopeHoverSound = () => {
+  if (!scopeHoverSound.value.enabled) return
+  const hoverSound = new Audio('/sounds/aim.mp3')
+  hoverSound.volume = scopeHoverSound.value.volume
+  hoverSound.play()
+}
+
+// 预览匹配按钮（狙击镜）点击音效
+const previewScopeClickSound = () => {
+  if (!scopeClickSound.value.enabled) return
+  const clickSound = new Audio('/sounds/shoot.mp3')
+  clickSound.volume = scopeClickSound.value.volume
+  clickSound.play()
+}
+
+// 更新匹配按钮（狙击镜）聚焦音效设置
+const updateScopeHoverSound = (key, value) => {
+  scopeHoverSound.value[key] = value
+  localStorage.setItem(`scopeHoverSound.${key}`, value.toString())
+}
+
+// 更新匹配按钮（狙击镜）点击音效设置
+const updateScopeClickSound = (key, value) => {
+  scopeClickSound.value[key] = value
+  localStorage.setItem(`scopeClickSound.${key}`, value.toString())
+}
+
+// 语言切换函数
+const switchLanguage = (newLang) => {
+  setLocale(newLang)
 }
 </script>
 
@@ -45,12 +86,15 @@ const previewSound = () => {
     <div class="settings-content">
       <!-- 声音设置面板 -->
       <div v-if="activeTab === 'sound'" class="settings-panel">
-        <h2>声音设置</h2>
+        <h2>{{ t('settings.sound.title') }}</h2>
+        
+        <!-- 打字音效设置 -->
         <div class="setting-group">
+          <h3>{{ t('settings.sound.typingSound') }}</h3>
           <div class="setting-item">
             <label class="setting-label">
               <span class="material-icons">keyboard</span>
-              打字音效
+              {{ t('settings.sound.enable') }}
             </label>
             <div class="setting-controls">
               <label class="switch">
@@ -61,11 +105,29 @@ const previewSound = () => {
                 />
                 <span class="slider"></span>
               </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.1"
+                :value="soundManager.getVolume()"
+                @input="e => soundManager.setVolume(parseFloat(e.target.value))"
+                :disabled="!soundManager.isEnabled()"
+                class="volume-slider"
+              />
+              <button 
+                class="preview-button"
+                @click="previewTypingSound"
+                :disabled="!soundManager.isEnabled()"
+              >
+                <span class="material-icons">play_circle</span>
+                {{ t('settings.sound.preview') }}
+              </button>
             </div>
           </div>
 
           <div class="setting-item">
-            <label class="setting-label">音效类型</label>
+            <label class="setting-label">{{ t('settings.sound.typingSoundType') }}</label>
             <div class="setting-controls">
               <select 
                 :value="soundManager.getCurrentSound()"
@@ -80,20 +142,109 @@ const previewSound = () => {
                   {{ sound.name }}
                 </option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 匹配按钮（狙击镜）音效设置 -->
+        <div class="setting-group">
+          <h3>{{ t('settings.sound.scopeTitle') }}</h3>
+          
+          <!-- 聚焦音效设置 -->
+          <div class="setting-item">
+            <label class="setting-label">
+              <span class="material-icons">center_focus_strong</span>
+              {{ t('settings.sound.scopeHoverSound') }}
+            </label>
+            <div class="setting-controls">
+              <label class="switch">
+                <input 
+                  type="checkbox"
+                  :checked="scopeHoverSound.enabled"
+                  @change="e => updateScopeHoverSound('enabled', e.target.checked)"
+                />
+                <span class="slider"></span>
+              </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.1"
+                :value="scopeHoverSound.volume"
+                @input="e => updateScopeHoverSound('volume', parseFloat(e.target.value))"
+                :disabled="!scopeHoverSound.enabled"
+                class="volume-slider"
+              />
               <button 
                 class="preview-button"
-                @click="previewSound"
-                :disabled="!soundManager.isEnabled()"
+                @click="previewScopeHoverSound"
+                :disabled="!scopeHoverSound.enabled"
               >
                 <span class="material-icons">play_circle</span>
-                试听
+                {{ t('settings.sound.preview') }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 点击音效设置 -->
+          <div class="setting-item">
+            <label class="setting-label">
+              <span class="material-icons">gps_fixed</span>
+              {{ t('settings.sound.scopeClickSound') }}
+            </label>
+            <div class="setting-controls">
+              <label class="switch">
+                <input 
+                  type="checkbox"
+                  :checked="scopeClickSound.enabled"
+                  @change="e => updateScopeClickSound('enabled', e.target.checked)"
+                />
+                <span class="slider"></span>
+              </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.1"
+                :value="scopeClickSound.volume"
+                @input="e => updateScopeClickSound('volume', parseFloat(e.target.value))"
+                :disabled="!scopeClickSound.enabled"
+                class="volume-slider"
+              />
+              <button 
+                class="preview-button"
+                @click="previewScopeClickSound"
+                :disabled="!scopeClickSound.enabled"
+              >
+                <span class="material-icons">play_circle</span>
+                {{ t('settings.sound.preview') }}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 预留其他设置面板 -->
+      <!-- 语言设置面板 -->
+      <div v-if="activeTab === 'language'" class="settings-panel">
+        <h2>{{ t('settings.language.title') }}</h2>
+        <div class="setting-group">
+          <div class="setting-item">
+            <label class="setting-label">
+              <span class="material-icons">language</span>
+              {{ t('settings.language.interfaceLanguage') }}
+            </label>
+            <div class="setting-controls">
+              <select 
+                :value="locale"
+                @change="e => switchLanguage(e.target.value)"
+              >
+                <option value="zh">{{ t('settings.language.chinese') }}</option>
+                <option value="en">{{ t('settings.language.english') }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -145,6 +296,7 @@ const previewSound = () => {
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
 }
 
 .setting-item {
@@ -265,5 +417,16 @@ select:disabled {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.setting-group h3 {
+  color: #666;
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+}
+
+.volume-slider {
+  width: 100px;
+  margin: 0 10px;
 }
 </style>

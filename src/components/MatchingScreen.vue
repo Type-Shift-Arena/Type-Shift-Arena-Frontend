@@ -84,6 +84,9 @@
   const opponentName = ref('')
   const opponentId = ref('')
   const opponentAvatar = ref('')
+
+  // 添加匹配请求状态标志
+  const isMatchRequestPending = ref(false)
   
   // Canvas 初始化逻辑
   const initCanvas = () => {
@@ -310,6 +313,9 @@
       clearInterval(countdownTimer)
     }
     
+    // 重置匹配请求状态
+    isMatchRequestPending.value = false
+
     // 开始新的倒计时
     countdownTimer = setInterval(() => {
       countdown.value--
@@ -344,6 +350,8 @@
       category: props.matchingOptions.category,
       difficulty: props.matchingOptions.difficulty
     })
+    
+    isMatchRequestPending.value = false
     emit('cancel')
   }
   
@@ -367,10 +375,8 @@
         const playerName = localStorage.getItem('userName')
         const playerAvatar = localStorage.getItem('imgSrc')
 
-        // 现在可以安全地订阅和发送消息
-        matchmakingSubscription = subscribeToMatchmaking(playerId)
-
-        sendMatchRequest({
+        // 先取消之前可能存在的匹配请求
+        sendCancelMatchRequest({
           playerId,
           playerName,
           playerAvatar,
@@ -378,9 +384,28 @@
           category: props.matchingOptions.category,
           difficulty: props.matchingOptions.difficulty
         })
+
+        // 等待一小段时间确保取消请求被处理
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // 现在可以安全地订阅和发送新的匹配消息
+        matchmakingSubscription = subscribeToMatchmaking(playerId)
+
+        // 防止重复发送匹配请求
+        if (!isMatchRequestPending.value) {
+          isMatchRequestPending.value = true
+          sendMatchRequest({
+            playerId,
+            playerName,
+            playerAvatar,
+            language: props.matchingOptions.language,
+            category: props.matchingOptions.category,
+            difficulty: props.matchingOptions.difficulty
+          })
+        }
       } catch (error) {
         console.error('匹配初始化失败:', error)
-        // 可以在这里添加错误处理逻辑
+        isMatchRequestPending.value = false
       }
       
       onUnmounted(() => {
@@ -389,13 +414,19 @@
         if (animationFrame) {
           cancelAnimationFrame(animationFrame)
         }
-        // 取消所有订阅
-        // if (matchmakingSubscription) {
-        //   matchmakingSubscription.unsubscribe()
-        // }
-        // // 使用 unsubscribe 方法清理所有相关订阅
-        // unsubscribe(`room_${roomId}`)  // 房间广播订阅
-        // unsubscribe(`room_info_${playerId}`)  // 个人房间信息订阅
+
+        // 在组件卸载时取消匹配请求
+        const playerId = localStorage.getItem('userId')
+        if (playerId && !matchFound.value) {
+          sendCancelMatchRequest({
+            playerId,
+            playerName: localStorage.getItem('userName'),
+            playerAvatar: localStorage.getItem('imgSrc'),
+            language: props.matchingOptions.language,
+            category: props.matchingOptions.category,
+            difficulty: props.matchingOptions.difficulty
+          })
+        }
       })
     })
   })
