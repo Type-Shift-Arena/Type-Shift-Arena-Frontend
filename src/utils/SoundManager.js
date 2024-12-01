@@ -11,6 +11,7 @@ class SoundManager {
     constructor() {
       this.enabled = localStorage.getItem('typeSound') !== 'false';
       this.currentSound = localStorage.getItem('typeSoundType') || 'mechanical';
+      this.volume = Number(localStorage.getItem('typeSoundVolume')) || 0.5;
       this.sounds = {};
       this.loading = true;
 
@@ -49,7 +50,7 @@ class SoundManager {
       if (sound) {
         // 克隆音频节点以支持快速连续播放
         const clone = sound.cloneNode();
-        clone.volume = 0.5; // 设置适中的音量
+        clone.volume = this.volume;
         clone.play().catch(err => console.error('Error playing sound:', err));
       }
     }
@@ -66,6 +67,17 @@ class SoundManager {
         this.currentSound = type;
         localStorage.setItem('typeSoundType', type);
       }
+    }
+
+    // 设置音量
+    setVolume(volume) {
+      this.volume = volume;
+      localStorage.setItem('typeSoundVolume', volume);
+    }
+
+    // 获取音量
+    getVolume() {
+      return this.volume;
     }
   
     // 检查音效开关

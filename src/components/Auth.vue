@@ -52,6 +52,12 @@ const doSignIn = async () => {
       localStorage.setItem('imgSrc', data.imgSrc)
       axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
       store.isLoggedIn = true
+      ElNotification({
+        title: '登录成功',
+        message: '您已成功登录',
+        type: 'success',
+        duration: 1500,
+      });
       router.push('/')
     } else {
       ElNotification({

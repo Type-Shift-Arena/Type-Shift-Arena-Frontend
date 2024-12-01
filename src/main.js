@@ -8,10 +8,8 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import axios from 'axios'
-import { createI18n } from 'vue-i18n' // Use vue-i18n for Vue 3
+import i18n from './i18n' // 导入新的 i18n 配置
 import { API_BASE_URL } from '@/config'
-import en from './locales/en.json'
-import zh from './locales/zh.json'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 
@@ -21,16 +19,6 @@ const token = localStorage.getItem('token')
 if (token) {
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
 }
-
-// Create i18n instance
-const i18n = createI18n({
-  legacy: false, // Use Composition API
-  locale: 'zh',
-  messages: {
-    en,
-    zh
-  }
-})
 
 // Create Vue app
 const app = createApp(App)
@@ -42,4 +30,3 @@ app.mount('#app')
 console.log('Current Environment:', import.meta.env.MODE)
 console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL)
 console.log('WebSocket URL:', import.meta.env.VITE_WS_URL)
-

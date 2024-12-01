@@ -6,7 +6,7 @@
 -->
 <script setup>
 import { store } from '../stores/store';
-import { toRef } from 'vue';
+import { toRef, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElNotification } from 'element-plus';
@@ -15,6 +15,46 @@ const router = useRouter()
 const isLoggedIn = toRef(store, 'isLoggedIn');
 const avatarUrl = toRef(store, 'avatarUrl');
 const nickname = toRef(store, 'nickname');
+
+const checkTokenExpiration = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  
+  try {
+    // JWT token consists of three parts separated by dots
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const expirationTime = payload.exp * 1000; // Convert to milliseconds
+    
+    if (Date.now() >= expirationTime) {
+      logout();
+      ElNotification({
+        title: '会话过期',
+        message: '登录已过期，请重新登录',
+        type: 'warning',
+        duration: 3000,
+      });
+    }
+  } catch (error) {
+    console.error('Token validation error:', error);
+    logout();
+  }
+}
+
+// Check token every minute
+let tokenCheckInterval;
+
+onMounted(() => {
+  // Initial check
+  checkTokenExpiration();
+  // Set up periodic checks
+  tokenCheckInterval = setInterval(checkTokenExpiration, 60000);
+});
+
+onBeforeUnmount(() => {
+  if (tokenCheckInterval) {
+    clearInterval(tokenCheckInterval);
+  }
+});
 
 const logout = () => {
   localStorage.removeItem('token')

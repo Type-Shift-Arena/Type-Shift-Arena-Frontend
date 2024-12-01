@@ -15,5 +15,56 @@
     "joinTestRoom": "Join Test Room",
     "enterRoomId": "Enter Room ID",
     "switchLanguage": "Switch Language"
+  },
+  "settings": {
+    "title": "Settings",
+    "sound": {
+      "title": "Sound Settings",  
+      "typingSound": "Typing Sound",
+      "enable": "Enable",
+      "volume": "Volume",
+      "typingSoundType": "Sound Type",
+      "preview": "Preview",
+      "scopeTitle": "Match Button (Scope) Sound",
+      "scopeHoverSound": "Hover Sound",
+      "scopeClickSound": "Click Sound"
+    },
+    "language": {
+      "title": "Language Settings",
+      "interfaceLanguage": "Interface Language",
+      "chinese": "中文",
+      "english": "English",
+      "japanese": "日本語"
+    }
+  },
+  "gameRoom": {
+    "title": "Game Room",
+    "waitingForPlayers": "Waiting for players...",
+    "startCountdown": "Game starting soon",
+    "yourScore": "Your Score",
+    "opponentScore": "Opponent's Score",
+    "accuracy": "Accuracy",
+    "speed": "Speed",
+    "wpm": "WPM",
+    "ready": "Ready",
+    "start": "Start",
+    "leave": "Leave Room",
+    "invite": "Invite Friends",
+    "roomId": "Room ID",
+    "copied": "Copied",
+    "copy": "Copy"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error occurred",
+    "retry": "Retry",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish"
   }
 }
