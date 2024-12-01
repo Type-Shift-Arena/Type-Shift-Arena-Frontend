@@ -60,16 +60,19 @@ export function usePlayerStats(roomId, stompClient) {
         body: JSON.stringify(progressData)
       })
 
-      // 当进度达到100%时，发送游戏结束消息
+      // 当进度达到100%时，立即发送游戏结束消息
       if (myProgress.value === 100) {
-        stompClient.value.publish({
-          destination: `/app/room/${roomId}/finish`,
-          body: JSON.stringify({
-            type: 'GAME_FINISH',
-            playerId: localStorage.getItem('userId'),
-            timestamp: Date.now()
+        // 确保在发送结束消息之前有一个短暂延迟，确保进度消息先到达
+        setTimeout(() => {
+          stompClient.value.publish({
+            destination: `/app/room/${roomId}/finish`,
+            body: JSON.stringify({
+              type: 'GAME_FINISH',
+              playerId: localStorage.getItem('userId'),
+              timestamp: Date.now()
+            })
           })
-        })
+        }, 100) // 100ms的延迟，确保进度消息先到达
       }
     }
   }
@@ -95,9 +98,6 @@ export function usePlayerStats(roomId, stompClient) {
     const currentInput = event.target.value
     playerText.value = currentInput
 
-    // 计算进度 - 已输入字符数占总长度的百分比
-    myProgress.value = Math.round((currentInput.length / targetText.length) * 100)
-
     // 计算正确字符数
     const correctChars = currentInput.split('').filter((char, index) => 
       char === targetText[index]
@@ -105,6 +105,24 @@ export function usePlayerStats(roomId, stompClient) {
 
     // 计算错误数 - 只计算已输入部分的错误
     myStats.errorCount = currentInput.length - correctChars
+
+    // 检查是否完全匹配目标文本
+    const isCompleted = currentInput === targetText
+
+    // 进度计算逻辑
+    if (isCompleted) {
+      // 完成时立即设置100%并发送，不使用节流
+      myProgress.value = 100
+      sendProgress() // 直接调用sendProgress，跳过节流
+    } else {
+      // 只有当字符完全匹配时才计入进度
+      const isFullyMatched = currentInput === targetText.substring(0, currentInput.length)
+      if (isFullyMatched) {
+        myProgress.value = Math.round((currentInput.length / targetText.length) * 100)
+        // 使用节流函数发送进度
+        throttledSendProgress()
+      }
+    }
 
     // 修改准确率计算 - 正确字符数除以已输入的总字符数
     if (currentInput.length > 0) {
@@ -120,11 +138,7 @@ export function usePlayerStats(roomId, stompClient) {
       myStats.wpm = Math.round(wordsTyped / timeElapsed) || 0
     }
 
-    // 使用节流函数发送进度
-    throttledSendProgress()
-
-    // 只有当输入长度等于目标长度且全部正确时才算完成
-    return currentInput.length === targetText.length && correctChars === targetText.length
+    return isCompleted
   }
 
   // 更新对手状态

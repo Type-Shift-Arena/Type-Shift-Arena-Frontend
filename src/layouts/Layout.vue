@@ -2,26 +2,70 @@
  * @Author: hiddenSharp429 z404878860@163.com
  * @Date: 2024-10-28 20:13:49
  * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-16 06:53:08
+ * @LastEditTime: 2024-11-29 17:01:08
 -->
 <script setup>
-import { ref, onMounted } from 'vue'
+import { store } from '../stores/store';
+import { toRef, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import { ElNotification } from 'element-plus';
 
 const router = useRouter()
-const isLoggedIn = ref(false)
+const isLoggedIn = toRef(store, 'isLoggedIn');
+const avatarUrl = toRef(store, 'avatarUrl');
+const nickname = toRef(store, 'nickname');
 
-// 在组件挂载时检查登录状态
+const checkTokenExpiration = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  
+  try {
+    // JWT token consists of three parts separated by dots
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const expirationTime = payload.exp * 1000; // Convert to milliseconds
+    
+    if (Date.now() >= expirationTime) {
+      logout();
+      ElNotification({
+        title: '会话过期',
+        message: '登录已过期，请重新登录',
+        type: 'warning',
+        duration: 3000,
+      });
+    }
+  } catch (error) {
+    console.error('Token validation error:', error);
+    logout();
+  }
+}
+
+// Check token every minute
+let tokenCheckInterval;
+
 onMounted(() => {
-  isLoggedIn.value = !!localStorage.getItem('token')
-})
+  // Initial check
+  checkTokenExpiration();
+  // Set up periodic checks
+  tokenCheckInterval = setInterval(checkTokenExpiration, 60000);
+});
+
+onBeforeUnmount(() => {
+  if (tokenCheckInterval) {
+    clearInterval(tokenCheckInterval);
+  }
+});
 
 const logout = () => {
   localStorage.removeItem('token')
-  // 清除 axios 默认 header
   delete axios.defaults.headers.common['Authorization']
-  isLoggedIn.value = false
+  store.isLoggedIn = false
+  ElNotification({
+    title: '退出账号',
+    message: '你成功的退出的账号',
+    type: 'success',
+    duration: 1500,
+  });
   router.push('/auth')
 }
 </script>
@@ -39,7 +83,16 @@ const logout = () => {
           </template>
           <template v-else>
             <router-link to="/game-lobby">游戏大厅</router-link>
-            <a @click="logout" class="logout-btn">退出</a>
+            <router-link to="/personal">
+              <div class="user-info">
+                <div class="user-avatar">
+                  <img id="userAvatar" :src="avatarUrl" :alt="nickname" />
+                </div>
+                <span class="user-nickname">{{ nickname }}</span>
+              </div>
+            </router-link>
+
+            <a @click="logout" class="logout-btn">注销</a>
             <router-link to="/settings" class="settings-link">
               <span class="material-icons">settings</span>
             </router-link>
@@ -53,8 +106,9 @@ const logout = () => {
     </main>
 
     <footer class="footer">
-      <p>© Type Shift Arena 2024</p>
-      <a href="https://beian.miit.gov.cn/" target="_blank">粤ICP备2024219097号-2</a>
+      <span class="footer-logo">Type Shift Arena</span>
+      <span class="footer-cr">Copyright (c) 2024 Type Shift Arena</span>
+      <a href="https://beian.miit.gov.cn/" target="_blank" class="footer-link">粤ICP备2024219097号-3</a>
     </footer>
   </div>
 </template>
@@ -125,12 +179,38 @@ nav {
 
 .footer {
   background-color: #2c3e50;
-  padding: 1rem;
+  padding: 0.3rem;
   color: white;
   text-align: center;
   position: fixed;
   bottom: 0;
   width: 100%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.footer-logo {
+  font-family: 'Lobster', cursive;
+  color: #ffffff;
+  font-size: 1.0rem;
+}
+
+.footer-cr {
+  font-size: 0.5rem;
+}
+
+
+.footer-link {
+  color: gray;
+  text-decoration: none;
+  font-size: 0.5rem;
+  margin-top: 0.1rem;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
 }
 
 .logout-btn {
@@ -161,5 +241,27 @@ nav {
   display: flex;
   align-items: center;
   gap: 20px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  position: relative;
+}
+
+.user-avatar img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #6f6f6f;
+}
+
+.user-nickname {
+  color: #fff;
+  font-weight: bold;
 }
 </style>

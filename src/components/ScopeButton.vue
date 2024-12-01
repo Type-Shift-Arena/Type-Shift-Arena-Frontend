@@ -61,8 +61,6 @@
     disabled?: boolean;
     /** 主题颜色（十六进制颜色代码） */
     themeColor?: string;
-    /** 是否启用音效 */
-    sound?: boolean;
   }
   
   /**
@@ -72,7 +70,6 @@
    *   :size="300"
    *   :disabled="false"
    *   themeColor="#4f8cff"
-   *   :sound="true"
    *   @click="handleClick"
    * >
    *   开始匹配
@@ -81,8 +78,7 @@
   const props = withDefaults(defineProps<ScopeButtonProps>(), {
     size: 300,
     disabled: false,
-    themeColor: '#4f8cff',
-    sound: true
+    themeColor: '#4f8cff'
   });
   
   /**
@@ -110,10 +106,13 @@
   
   // 初始化音效
   onMounted(() => {
-    if (props.sound) {
+    const hoverEnabled = localStorage.getItem('scopeHoverSound.enabled') !== 'false';
+    const clickEnabled = localStorage.getItem('scopeClickSound.enabled') !== 'false';
+    
+    if (hoverEnabled || clickEnabled) {
       sounds.value = {
-        hover: new Audio('/sounds/aim.mp3'),
-        click: new Audio('/sounds/shoot.mp3')
+        hover: hoverEnabled ? new Audio('/sounds/aim.mp3') : null,
+        click: clickEnabled ? new Audio('/sounds/shoot.mp3') : null
       };
       
       // 预加载音效
@@ -121,8 +120,12 @@
       sounds.value.click?.load();
       
       // 设置音量
-      if (sounds.value.hover) sounds.value.hover.volume = 0.5;
-      if (sounds.value.click) sounds.value.click.volume = 0.5;
+      if (sounds.value.hover) {
+        sounds.value.hover.volume = Number(localStorage.getItem('scopeHoverSound.volume')) || 0.5;
+      }
+      if (sounds.value.click) {
+        sounds.value.click.volume = Number(localStorage.getItem('scopeClickSound.volume')) || 0.5;
+      }
     }
   });
   
@@ -131,7 +134,8 @@
    * @param event - 鼠标事件对象
    */
   const handleClick = (event: MouseEvent) => {
-    if (props.sound) {
+    const clickEnabled = localStorage.getItem('scopeClickSound.enabled') !== 'false';
+    if (clickEnabled) {
       // 停止悬停音效
       if (sounds.value.hover) {
         sounds.value.hover.pause();
@@ -150,7 +154,8 @@
    * 处理按钮悬停事件
    */
   const handleHover = () => {
-    if (props.sound && !props.disabled) {
+    const hoverEnabled = localStorage.getItem('scopeHoverSound.enabled') !== 'false';
+    if (hoverEnabled && !props.disabled) {
       // 停止之前的悬停音效
       if (sounds.value.hover) {
         sounds.value.hover.pause();

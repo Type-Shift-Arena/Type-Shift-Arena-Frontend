@@ -11,6 +11,7 @@
   import Settings from '@/views/Settings.vue'
   import GameLobby from '@/views/GameLobby.vue'
   import GameRoom from '@/views/GameRoom.vue'
+  import Personal from '../components/Personal.vue'
 
   const routes = [
     {
@@ -33,6 +34,11 @@
           component: GameRoom
         },
         {
+          path: 'personal',
+          name: 'personal',
+          component: Personal
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: Settings,
@@ -44,7 +50,6 @@
           component: GameLobby,
           meta: { requiresAuth: true }
         },
-
         {
           path: 'typing-practice',
           name: 'typingPractice',

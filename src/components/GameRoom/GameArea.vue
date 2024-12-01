@@ -1,6 +1,8 @@
 <script setup>
 import { ref, watch } from 'vue'
 
+const isComposing = ref(false)
+
 const props = defineProps({
   targetText: {
     type: String,
@@ -20,16 +22,44 @@ const emit = defineEmits(['update:playerText', 'input'])
 
 // 输入处理
 const handleInput = (event) => {
+  // 只在非输入法组合状态下更新文本
+  if (!isComposing.value) {
+    emit('update:playerText', event.target.value)
+    emit('input', event)
+  }
+}
+
+// 输入法组合开始
+const handleCompositionStart = () => {
+  isComposing.value = true
+}
+
+// 输入法组合结束
+const handleCompositionEnd = (event) => {
+  isComposing.value = false
+  // 在组合结束时更新文本
   emit('update:playerText', event.target.value)
   emit('input', event)
 }
 
 // 计算字符状态的方法
 const getCharClass = (char, index) => {
+  // 只在当前输入位置使用组合状态判断
+  if (isComposing.value && props.playerText.length === index) {
+    return {
+      'current': true,
+      'space': char === ' '
+    }
+  }
+
+  // 对于已经输入的字符，保持正常的样式判断
+  const isCurrentPos = props.playerText.length === index
+  const playerChar = props.playerText[index]
+  
   return {
-    'correct': props.playerText[index] === char,
-    'incorrect': props.playerText[index] && props.playerText[index] !== char,
-    'current': props.playerText.length === index,
+    'correct': playerChar === char,
+    'incorrect': playerChar && playerChar !== char,
+    'current': isCurrentPos,
     'space': char === ' '
   }
 }
@@ -50,6 +80,8 @@ const getCharClass = (char, index) => {
     <textarea
       :value="playerText"
       @input="handleInput"
+      @compositionstart="handleCompositionStart"
+      @compositionend="handleCompositionEnd"
       :disabled="gameStatus === 'finished'"
       :placeholder="gameStatus === 'playing' ? '开始输入...' : '等待对手加入...'"
       class="input-area"
