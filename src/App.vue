@@ -1,16 +1,35 @@
-<!--
- * @Author: hiddenSharp429 z404878860@163.com
- * @Date: 2024-10-28 19:44:55
- * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-29 16:06:29
--->
-<script setup>
-import { RouterView } from 'vue-router'
-</script>
-
 <template>
-  <RouterView />
+  <router-view></router-view>
 </template>
 
-<style scoped>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  background-color: #f4f4f4;
+  color: #333; /* 添加默认文字颜色 */
+}
+
+#app {
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
 </style>
