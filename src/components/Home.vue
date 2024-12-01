@@ -40,7 +40,12 @@ const joinTestRoom = () => {
   } else {
     alert(t('home.enterRoomId'));
   }
-};
+}
+
+// 技能提升按钮的点击事件处理函数
+const startTypingPractice = () => {
+  router.push('/typing-practice')
+}
 </script>
 
 <template>
@@ -67,7 +72,9 @@ const joinTestRoom = () => {
         <p>{{ $t('home.realTimeBattleDescription') }}</p>
       </div>
       <div class="feature">
-        <h3>{{ $t('home.skillImprovement') }}</h3>
+        <button @click="startTypingPractice" class="practice-button">
+          {{ $t('home.skillImprovement') }}
+        </button>
         <p>{{ $t('home.skillImprovementDescription') }}</p>
       </div>
       <div class="feature">
@@ -174,6 +181,11 @@ const joinTestRoom = () => {
   background: #f8f9fa;
   border-radius: 8px;
 }
+
+.practice-button {
+  font-size: 1.2rem; /* 增大字体大小 */
+}
+
 
 .test-buttons input {
   padding: 0.5rem;
