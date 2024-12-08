@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-
+import Friends from '../components/Friends/Friends.vue'
 const router = useRouter();
 const { t, locale } = useI18n();
 

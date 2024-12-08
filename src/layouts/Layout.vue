@@ -5,40 +5,49 @@
  * @LastEditTime: 2024-11-29 17:01:08
 -->
 <script setup>
-import { store } from '../stores/store';
-import { toRef, onMounted, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router'
-import axios from 'axios'
-import { ElNotification } from 'element-plus';
+import { store } from "../stores/store";
+import { toRef, onMounted, onBeforeUnmount, ref, reactive, provide } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
+import { ElNotification } from "element-plus";
+import { Teleport } from "vue";
+import Friends from "../components/Friends/Friends.vue";
 
-const router = useRouter()
-const isLoggedIn = toRef(store, 'isLoggedIn');
-const avatarUrl = toRef(store, 'avatarUrl');
-const nickname = toRef(store, 'nickname');
+const router = useRouter();
+const isLoggedIn = toRef(store, "isLoggedIn");
+const avatarUrl = toRef(store, "avatarUrl");
+const nickname = toRef(store, "nickname");
+const userInfo = reactive({
+  isLoggedIn,
+  avatarUrl,
+  nickname
+})
+let isShow=ref(false)
+provide('userInfo',userInfo)
 
 const checkTokenExpiration = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   if (!token) return;
-  
+
   try {
     // JWT token consists of three parts separated by dots
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = JSON.parse(atob(token.split(".")[1]));
     const expirationTime = payload.exp * 1000; // Convert to milliseconds
-    
+
     if (Date.now() >= expirationTime) {
       logout();
       ElNotification({
-        title: '会话过期',
-        message: '登录已过期，请重新登录',
-        type: 'warning',
+        title: "会话过期",
+        message: "登录已过期，请重新登录",
+        type: "warning",
         duration: 3000,
       });
     }
   } catch (error) {
-    console.error('Token validation error:', error);
+    console.error("Token validation error:", error);
     logout();
   }
-}
+};
 
 // Check token every minute
 let tokenCheckInterval;
@@ -57,17 +66,17 @@ onBeforeUnmount(() => {
 });
 
 const logout = () => {
-  localStorage.removeItem('token')
-  delete axios.defaults.headers.common['Authorization']
-  store.isLoggedIn = false
+  localStorage.removeItem("token");
+  delete axios.defaults.headers.common["Authorization"];
+  store.isLoggedIn = false;
   ElNotification({
-    title: '退出账号',
-    message: '你成功的退出的账号',
-    type: 'success',
+    title: "退出账号",
+    message: "你成功的退出的账号",
+    type: "success",
     duration: 1500,
   });
-  router.push('/auth')
-}
+  router.push("/auth");
+};
 </script>
 
 <template>
@@ -96,7 +105,12 @@ const logout = () => {
             <router-link to="/settings" class="settings-link">
               <span class="material-icons">settings</span>
             </router-link>
-          </template>
+            <div class="friends" @click="isShow = !isShow">
+              <span>好友列表</span>
+              <right-outlined class="friends-svg" />                         
+            </div>
+            <Friends v-if="isShow" ></Friends>  
+          </template> 
         </div>
       </nav>
     </header>
@@ -108,16 +122,46 @@ const logout = () => {
     <footer class="footer">
       <span class="footer-logo">Type Shift Arena</span>
       <span class="footer-cr">Copyright (c) 2024 Type Shift Arena</span>
-      <a href="https://beian.miit.gov.cn/" target="_blank" class="footer-link">粤ICP备2024219097号-3</a>
+      <a href="https://beian.miit.gov.cn/" target="_blank" class="footer-link"
+        >粤ICP备2024219097号-3</a
+      >
     </footer>
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
+.friends {
+  width: 100px;
+  height: 30px;
+
+  // background-color: lightblue;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  justify-content: center;
+  user-select: none;
+
+  cursor: pointer;
+  &:hover {
+    .friends-svg {
+      transform: translateX(5px);
+    }
+  }
+  .friends-svg {
+    margin-left: 5px;
+   
+    font-size: 16px;
+    transform: translateX(0); 
+    transition: transform 0.3s ease; 
+    
+  }
+}
+
 .app-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+ 
 }
 
 .header {
@@ -137,7 +181,7 @@ nav {
 .logo {
   font-size: 1.8rem;
   font-weight: bold;
-  font-family: 'Russo One', sans-serif;
+  font-family: "Russo One", sans-serif;
   color: transparent;
   background: linear-gradient(to right, #ffffff, #f3f3f3, #ffffff);
   -webkit-background-clip: text;
@@ -150,15 +194,10 @@ nav {
   transition: all 0.3s ease;
 }
 
-
 .logo:hover {
   transform: scale(1.05);
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
-  background: linear-gradient(
-    to right, 
-    #f3f3f3,
-    #ffffff
-  );
+  background: linear-gradient(to right, #f3f3f3, #ffffff);
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -192,15 +231,14 @@ nav {
 }
 
 .footer-logo {
-  font-family: 'Lobster', cursive;
+  font-family: "Lobster", cursive;
   color: #ffffff;
-  font-size: 1.0rem;
+  font-size: 1rem;
 }
 
 .footer-cr {
   font-size: 0.5rem;
 }
-
 
 .footer-link {
   color: gray;
