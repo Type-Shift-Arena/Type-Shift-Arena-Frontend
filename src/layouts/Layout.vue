@@ -44,10 +44,10 @@ const checkTokenExpiration = () => {
       });
     }
   } catch (error) {
-    console.error("Token validation error:", error);
+    console.error('Token validation error:', error);
     logout();
   }
-};
+}
 
 // Check token every minute
 let tokenCheckInterval;
@@ -66,17 +66,17 @@ onBeforeUnmount(() => {
 });
 
 const logout = () => {
-  localStorage.removeItem("token");
-  delete axios.defaults.headers.common["Authorization"];
-  store.isLoggedIn = false;
+  localStorage.removeItem('token')
+  delete axios.defaults.headers.common['Authorization']
+  store.isLoggedIn = false
   ElNotification({
-    title: "退出账号",
-    message: "你成功的退出的账号",
-    type: "success",
+    title: '退出账号',
+    message: '你成功的退出的账号',
+    type: 'success',
     duration: 1500,
   });
-  router.push("/auth");
-};
+  router.push('/auth')
+}
 </script>
 
 <template>
@@ -122,9 +122,7 @@ const logout = () => {
     <footer class="footer">
       <span class="footer-logo">Type Shift Arena</span>
       <span class="footer-cr">Copyright (c) 2024 Type Shift Arena</span>
-      <a href="https://beian.miit.gov.cn/" target="_blank" class="footer-link"
-        >粤ICP备2024219097号-3</a
-      >
+      <a href="https://beian.miit.gov.cn/" target="_blank" class="footer-link">粤ICP备2024219097号-3</a>
     </footer>
   </div>
 </template>
@@ -181,7 +179,7 @@ nav {
 .logo {
   font-size: 1.8rem;
   font-weight: bold;
-  font-family: "Russo One", sans-serif;
+  font-family: 'Russo One', sans-serif;
   color: transparent;
   background: linear-gradient(to right, #ffffff, #f3f3f3, #ffffff);
   -webkit-background-clip: text;
