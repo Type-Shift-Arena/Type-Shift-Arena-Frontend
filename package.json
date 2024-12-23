@@ -13,6 +13,7 @@
   "dependencies": {
     "@stomp/stompjs": "^7.0.0",
     "@vueuse/core": "^11.1.0",
+    "ant-design-vue": "^4.2.6",
     "axios": "^1.7.8",
     "element-plus": "^2.8.8",
     "pinia": "^2.2.4",
