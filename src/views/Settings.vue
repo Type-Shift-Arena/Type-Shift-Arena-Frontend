@@ -1,12 +1,32 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import soundManager from '@/utils/SoundManager'
+import CustomSelect from '../components/CustomSelect.vue'
 import { SOUND_ASSETS } from '@/config/soundAssets'
+import { LANGUAGE_ASSETS } from '@/config/languageAssets'
 import { setLocale } from '@/i18n'
 
 const { locale, t } = useI18n()
 const activeTab = ref('sound')
+
+// 动态生成语言选项
+const languageOptions = computed(() => 
+  Object.values(LANGUAGE_ASSETS).map(lang => ({
+    value: lang.id,
+    label: lang.name,
+    icon: lang.icon
+  }))
+)
+
+// 动态生成音效选项
+const soundOptions = computed(() => 
+  Object.values(SOUND_ASSETS).map(sound => ({
+    value: sound.id,
+    label: sound.name,
+    icon: 'music_note'
+  }))
+)
 
 // 匹配按钮（狙击镜）音效设置
 const scopeHoverSound = ref({
@@ -18,11 +38,6 @@ const scopeClickSound = ref({
   enabled: localStorage.getItem('scopeClickSound.enabled') !== 'false',
   volume: Number(localStorage.getItem('scopeClickSound.volume')) || 0.5
 })
-
-const tabs = [
-  { id: 'sound', label: t('settings.sound.title'), icon: 'volume_up' },
-  { id: 'language', label: t('settings.language.title'), icon: 'language' },
-]
 
 // 预览打字音效
 const previewTypingSound = () => {
@@ -84,13 +99,11 @@ const switchLanguage = (newLang) => {
               {{ t('settings.language.interfaceLanguage') }}
             </label>
             <div class="setting-controls">
-              <select 
-                :value="locale"
-                @change="e => switchLanguage(e.target.value)"
-              >
-                <option value="zh">{{ t('settings.language.chinese') }}</option>
-                <option value="en">{{ t('settings.language.english') }}</option>
-              </select>
+              <CustomSelect
+              v-model="locale"
+              :options="languageOptions"
+              @change="switchLanguage"
+            />
             </div>
           </div>
         </div>
@@ -136,19 +149,12 @@ const switchLanguage = (newLang) => {
           <div class="setting-item">
             <label class="setting-label">{{ t('settings.sound.typingSoundType') }}</label>
             <div class="setting-controls">
-              <select 
+              <CustomSelect
                 :value="soundManager.getCurrentSound()"
-                @change="e => soundManager.changeSound(e.target.value)"
+                :options="soundOptions"
                 :disabled="!soundManager.isEnabled()"
-              >
-                <option 
-                  v-for="sound in Object.values(SOUND_ASSETS)" 
-                  :key="sound.id" 
-                  :value="sound.id"
-                >
-                  {{ sound.name }}
-                </option>
-              </select>
+                @change="soundManager.changeSound"
+              />
             </div>
           </div>
         </div>
