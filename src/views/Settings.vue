@@ -71,23 +71,30 @@ const switchLanguage = (newLang) => {
 
 <template>
   <div class="settings-container">
-    <div class="settings-sidebar">
-      <div 
-        v-for="tab in tabs" 
-        :key="tab.id"
-        :class="['tab-item', { active: activeTab === tab.id }]"
-        @click="activeTab = tab.id"
-      >
-        <span class="material-icons">{{ tab.icon }}</span>
-        {{ tab.label }}
-      </div>
-    </div>
-
     <div class="settings-content">
-      <!-- 声音设置面板 -->
-      <div v-if="activeTab === 'sound'" class="settings-panel">
-        <h2>{{ t('settings.sound.title') }}</h2>
-        
+      <div class="settings-panel">
+        <h2>{{ t('settings.title') }}</h2>
+
+        <!-- 语言设置部分 -->
+        <div class="setting-group">
+          <h3>{{ t('settings.language.title') }}</h3>
+          <div class="setting-item">
+            <label class="setting-label">
+              <span class="material-icons">language</span>
+              {{ t('settings.language.interfaceLanguage') }}
+            </label>
+            <div class="setting-controls">
+              <select 
+                :value="locale"
+                @change="e => switchLanguage(e.target.value)"
+              >
+                <option value="zh">{{ t('settings.language.chinese') }}</option>
+                <option value="en">{{ t('settings.language.english') }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <!-- 打字音效设置 -->
         <div class="setting-group">
           <h3>{{ t('settings.sound.typingSound') }}</h3>
@@ -146,7 +153,7 @@ const switchLanguage = (newLang) => {
           </div>
         </div>
 
-        <!-- 匹配按钮（狙击镜）音效设置 -->
+        <!-- 匹配按钮音效设置 -->
         <div class="setting-group">
           <h3>{{ t('settings.sound.scopeTitle') }}</h3>
           
@@ -223,88 +230,101 @@ const switchLanguage = (newLang) => {
           </div>
         </div>
       </div>
-
-      <!-- 语言设置面板 -->
-      <div v-if="activeTab === 'language'" class="settings-panel">
-        <h2>{{ t('settings.language.title') }}</h2>
-        <div class="setting-group">
-          <div class="setting-item">
-            <label class="setting-label">
-              <span class="material-icons">language</span>
-              {{ t('settings.language.interfaceLanguage') }}
-            </label>
-            <div class="setting-controls">
-              <select 
-                :value="locale"
-                @change="e => switchLanguage(e.target.value)"
-              >
-                <option value="zh">{{ t('settings.language.chinese') }}</option>
-                <option value="en">{{ t('settings.language.english') }}</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .settings-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.settings-layout {
   display: flex;
-  min-height: calc(100vh - 60px);
-  background: #f5f5f5;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: var(--secondary-dark);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
 .settings-sidebar {
   width: 250px;
-  background: white;
-  padding: 20px 0;
-  border-right: 1px solid #eee;
+  background: var(--accent-dark);
+  padding: 1.5rem 0;
 }
 
 .tab-item {
-  padding: 15px 25px;
+  padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent;
 }
 
 .tab-item:hover {
-  background: #f0f0f0;
+  background: var(--primary-dark);
+  color: var(--text-primary);
 }
 
 .tab-item.active {
-  background: #e0e0e0;
-  font-weight: 500;
+  background: var(--primary-dark);
+  color: var(--accent-color);
+  border-left-color: var(--accent-color);
 }
 
 .settings-content {
   flex: 1;
-  padding: 30px;
+  padding: 2rem;
+}
+
+.settings-panel {
+  background: var(--secondary-dark);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
 }
 
 .settings-panel h2 {
-  margin-bottom: 30px;
-  color: #333;
+  color: var(--text-primary);
+  margin-bottom: 2rem;
+  font-size: 1.8rem;
+  font-weight: 600;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .setting-group {
-  background: white;
+  background: var(--primary-dark);
   border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  margin-bottom: 20px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.setting-group h3 {
+  color: var(--accent-color);
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+  font-weight: 500;
 }
 
 .setting-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 0;
-  border-bottom: 1px solid #eee;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .setting-item:last-child {
@@ -314,14 +334,14 @@ const switchLanguage = (newLang) => {
 .setting-label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #333;
+  gap: 12px;
+  color: var(--text-primary);
 }
 
 .setting-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1rem;
 }
 
 /* 开关样式 */
@@ -345,7 +365,7 @@ const switchLanguage = (newLang) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: var(--accent-dark);
   transition: .4s;
   border-radius: 24px;
 }
@@ -363,70 +383,83 @@ const switchLanguage = (newLang) => {
 }
 
 input:checked + .slider {
-  background-color: #2196F3;
+  background-color: var(--accent-color);
 }
 
 input:checked + .slider:before {
   transform: translateX(26px);
 }
 
+/* 下拉框样式 */
 select {
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--secondary-dark);
+  color: var(--text-primary);
   min-width: 150px;
+  cursor: pointer;
 }
 
 select:disabled {
-  background: #f5f5f5;
+  background: var(--accent-dark);
   cursor: not-allowed;
+  opacity: 0.7;
 }
 
-/* 添加预览按钮样式 */
+/* 预览按钮样式 */
 .preview-button {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  color: #333;
+  gap: 8px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--secondary-dark);
+  color: var(--text-primary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
 }
 
 .preview-button:hover:not(:disabled) {
-  background: #f0f0f0;
-  border-color: #ccc;
+  background: var(--accent-dark);
+  border-color: var(--accent-color);
 }
 
 .preview-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #f5f5f5;
+  background: var(--accent-dark);
 }
 
 .preview-button .material-icons {
   font-size: 18px;
+  color: var(--accent-color);
 }
 
-/* 修改setting-controls样式以适应新按钮 */
-.setting-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.setting-group h3 {
-  color: #666;
-  margin-bottom: 15px;
-  font-size: 1.1rem;
-}
-
+/* 音量滑块样式 */
 .volume-slider {
-  width: 100px;
-  margin: 0 10px;
+  width: 120px;
+  height: 4px;
+  -webkit-appearance: none;
+  background: var(--accent-dark);
+  border-radius: 2px;
+  outline: none;
 }
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: var(--accent-hover);
+}
+
 </style>
