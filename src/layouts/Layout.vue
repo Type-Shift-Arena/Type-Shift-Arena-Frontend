@@ -6,7 +6,7 @@
 -->
 <script setup>
 import { store } from "../stores/store";
-import { toRef, onMounted, onBeforeUnmount, ref, reactive, provide, computed } from "vue";
+import { toRef, onMounted, onBeforeUnmount, ref, reactive, provide, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
 import { ElNotification } from "element-plus";
@@ -79,6 +79,21 @@ const logout = () => {
 }
 
 const isSidebarExpanded = ref(false)
+const showSidebar = ref(false) // 控制侧边栏是否显示
+
+// 监听登录状态变化
+watch(() => store.isLoggedIn, (newValue) => {
+  if (newValue) {
+    // 登录后，延迟显示侧边栏，配合动画效果
+    setTimeout(() => {
+      showSidebar.value = true
+    }, 100)
+  } else {
+    // 登出时立即隐藏侧边栏
+    showSidebar.value = false
+    isSidebarExpanded.value = false
+  }
+}, { immediate: true })
 
 const currentRoute = computed(() => route.path)
 
@@ -131,28 +146,31 @@ const collapseSidebar = () => {
     <!-- Main Content with Sidebar -->
     <div class="main-container">
       <!-- Collapsible Sidebar -->
-      <div 
-        class="sidebar" 
-        :class="{ 'expanded': isSidebarExpanded }"
-        @mouseenter="expandSidebar"
-        @mouseleave="collapseSidebar"
-      >
-        <div class="sidebar-content">
-          <router-link 
-            v-for="item in menuItems" 
-            :key="item.path"
-            :to="item.path"
-            class="menu-item"
-            :class="{ active: currentRoute === item.path }"
-          >
-            <span class="material-icons">{{ item.icon }}</span>
-            <span class="menu-text">{{ item.label }}</span>
-          </router-link>
+      <transition name="sidebar">
+        <div 
+          v-if="showSidebar"
+          class="sidebar" 
+          :class="{ 'expanded': isSidebarExpanded }"
+          @mouseenter="expandSidebar"
+          @mouseleave="collapseSidebar"
+        >
+          <div class="sidebar-content">
+            <router-link 
+              v-for="item in menuItems" 
+              :key="item.path"
+              :to="item.path"
+              class="menu-item"
+              :class="{ active: currentRoute === item.path }"
+            >
+              <span class="material-icons">{{ item.icon }}</span>
+              <span class="menu-text">{{ item.label }}</span>
+            </router-link>
+          </div>
         </div>
-      </div>
+      </transition>
 
       <!-- Main Content Area -->
-      <main class="content">
+      <main class="content" :class="{ 'with-sidebar': showSidebar }">
         <router-view></router-view>
       </main>
     </div>
@@ -176,6 +194,11 @@ const collapseSidebar = () => {
 
 /* Header Styles */
 .header {
+  position: fixed; /* 固定定位 */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000; /* 确保在最上层 */
   background-color: var(--secondary-dark);
   border-bottom: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
@@ -268,12 +291,16 @@ nav {
 }
 
 .sidebar {
+  position: fixed;
+  height: 80vh;
+  top: 90px;
+  left: 0;
   width: 70px;
   background-color: var(--secondary-dark);
-  border-right: 1px solid var(--border-color);
-  transition: width 0.3s ease;
+  transition: all 0.3s ease;
   overflow: hidden;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
 }
 
 .sidebar.expanded {
@@ -326,6 +353,16 @@ nav {
 /* Content Area */
 .content {
   flex: 1;
+  transition: all 0.5s ease;
+  padding: 2rem;
+}
+
+.content.with-sidebar {
+  margin-left: 60px; /* 默认侧边栏宽度 */
+}
+
+.sidebar.expanded + .content.with-sidebar {
+  margin-left: 240px; /* 展开时的侧边栏宽度 */
 }
 
 /* Footer Styles */
@@ -380,7 +417,6 @@ nav {
   -webkit-backdrop-filter: blur(10px);
 }
 
-/* 添加微妙的动画效果 */
 .menu-item {
   .material-icons {
     transition: transform 0.3s ease;
@@ -388,6 +424,37 @@ nav {
   
   &:hover .material-icons {
     transform: scale(1.1);
+  }
+}
+
+/* 侧边栏过渡动画 */
+.sidebar-enter-active,
+.sidebar-leave-active {
+  transition: all 0.5s ease;
+}
+
+.sidebar-enter-from {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.sidebar-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .content.with-sidebar {
+    margin-left: 0;
+  }
+  
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.expanded {
+    transform: translateX(0);
   }
 }
 </style>
