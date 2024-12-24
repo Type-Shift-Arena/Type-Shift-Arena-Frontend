@@ -220,148 +220,27 @@ const doSignUp = async () => {
   box-sizing: border-box;
 }
 
-
-h1 {
-  font-weight: bold;
-  margin: 0;
-}
-
-
-p {
-  font-size: 14px;
-  font-weight: 100;
-  line-height: 20px;
-  letter-spacing: 0.5px;
-  margin: 20px 0 30px;
-}
-
-span {
-  font-size: 12px;
-}
-
-a {
-  color: #333;
-  font-size: 14px;
-  text-decoration: none;
-  margin: 15px 0;
-}
-
-button {
-  border-radius: 20px;
-  border: 1px solid #ADC2B5;
-  background-color: #2c3e50;;
-  color: #FFFFFF;
-  font-size: 12px;
-  font-weight: bold;
-  padding: 12px 65px;
-  margin-top: 2rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: transform 80ms ease-in;
-}
-
-button:active {
-  transform: scale(0.95);
-}
-
-button:focus {
-  outline: none;
-}
-
-button.ghost {
-  background-color: transparent;
-  border-color: #FFFFFF;
-}
-
-form {
-  background-color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 0 50px;
-  height: 100%;
-  text-align: center;
-}
-
-
-.form-input {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-  position: relative;
-  display: block;
-}
-
-.form-input>.material-icons {
-  position: absolute;
-  font-size: 1.5rem;
-  top: 1.2rem;
-  left: -2.2rem;
-}
-
-.form-input input {
-  border: none;
-  box-shadow: none;
-  padding-top: 1.5rem;
-  padding-right: 0;
-  padding-bottom: .5rem;
-  padding-left: 0;
-  outline-style: none;
-  width: 100%;
-  border-bottom: 2px solid #2c292a;
-}
-
-.form-input input~.label {
-  color: #868e96;
-  font-size: 1rem;
-  margin: 0;
-  pointer-events: none;
-  position: absolute;
-  top: 1.5rem;
-  left: 0;
-  transition: top .2s, font .2s;
-  z-index: 1;
-}
-
-
-.form-input input:hover,
-.form-input input:focus {
-  outline: none;
-}
-
-.form-input input:focus~.underline {
-  background-color: color("irenic");
-  /* Note: replace with the actual color value */
-}
-
-.form-input input:focus~.label,
-.form-input input:valid~.label {
-  top: 0;
-  font-size: .85rem;
-}
-
-
-.sign {
-  background: #f6f5f7;
+.auth {
+  background: var(--primary-dark);
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
   font-family: 'Montserrat', sans-serif;
-  height: 95vh;
-  margin: -20px 0 50px;
+  height: 80vh;
+  margin: 0;
 }
 
 .container {
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25),
-    0 10px 10px rgba(0, 0, 0, 0.22);
+  background-color: var(--secondary-dark);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
   position: relative;
   overflow: hidden;
   width: 768px;
   max-width: 100%;
-  min-height: 480px;
+  min-height: 600px;
+  border: 1px solid var(--border-color);
 }
 
 .form-container {
@@ -377,10 +256,6 @@ form {
   z-index: 2;
 }
 
-.container.right-panel-active .sign-in-container {
-  transform: translateX(100%);
-}
-
 .sign-up-container {
   left: 0;
   width: 50%;
@@ -388,26 +263,98 @@ form {
   z-index: 1;
 }
 
-.container.right-panel-active .sign-up-container {
-  transform: translateX(100%);
-  opacity: 1;
-  z-index: 5;
-  animation: show 0.6s;
+form {
+  background-color: var(--secondary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 50px;
+  height: 100%;
+  text-align: center;
 }
 
-@keyframes show {
+h1 {
+  color: var(--text-primary);
+  margin: 0;
+  font-weight: bold;
+}
 
-  0%,
-  49.99% {
-    opacity: 0;
-    z-index: 1;
-  }
+p, span {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.5px;
+  margin: 20px 0 30px;
+}
 
-  50%,
-  100% {
-    opacity: 1;
-    z-index: 5;
-  }
+.form-input {
+  position: relative;
+  margin: 1rem 0;
+  width: 100%;
+}
+
+.form-input input {
+  background-color: var(--accent-dark);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 15px;
+  padding-left: 40px;
+  margin: 8px 0;
+  width: 100%;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.form-input input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.form-input .material-icons {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent-color);
+  font-size: 20px;
+  z-index: 1;
+}
+
+button {
+  border-radius: 20px;
+  border: 1px solid var(--accent-color);
+  background-color: var(--accent-color);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: bold;
+  padding: 12px 45px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: transform 80ms ease-in;
+  cursor: pointer;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+button:focus {
+  outline: none;
+}
+
+button.ghost {
+  background-color: transparent;
+  border-color: var(--text-primary);
+}
+
+button:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+button.ghost:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .overlay-container {
@@ -421,28 +368,18 @@ form {
   z-index: 100;
 }
 
-.container.right-panel-active .overlay-container {
-  transform: translateX(-100%);
-}
-
 .overlay {
-  background: #2c3e50;
-  background: -webkit-linear-gradient(to right, #2c3e50, #abacac);
-  background: linear-gradient(to right, #2c3e50, #abacac);
+  background: var(--gradient-primary);
   background-repeat: no-repeat;
   background-size: cover;
   background-position: 0 0;
-  color: #FFFFFF;
+  color: var(--text-primary);
   position: relative;
   left: -100%;
   height: 100%;
   width: 200%;
   transform: translateX(0);
   transition: transform 0.6s ease-in-out;
-}
-
-.container.right-panel-active .overlay {
-  transform: translateX(50%);
 }
 
 .overlay-panel {
@@ -464,12 +401,31 @@ form {
   transform: translateX(-20%);
 }
 
-.container.right-panel-active .overlay-left {
+.overlay-right {
+  right: 0;
   transform: translateX(0);
 }
 
-.overlay-right {
-  right: 0;
+.container.right-panel-active .sign-in-container {
+  transform: translateX(100%);
+}
+
+.container.right-panel-active .sign-up-container {
+  transform: translateX(100%);
+  opacity: 1;
+  z-index: 5;
+  animation: show 0.6s;
+}
+
+.container.right-panel-active .overlay-container {
+  transform: translateX(-100%);
+}
+
+.container.right-panel-active .overlay {
+  transform: translateX(50%);
+}
+
+.container.right-panel-active .overlay-left {
   transform: translateX(0);
 }
 
@@ -477,37 +433,84 @@ form {
   transform: translateX(20%);
 }
 
-.social-container {
-  margin: 20px 0;
+@keyframes show {
+  0%, 49.99% {
+    opacity: 0;
+    z-index: 1;
+  }
+  50%, 100% {
+    opacity: 1;
+    z-index: 5;
+  }
 }
 
-.social-container a {
-  border: 1px solid #DDDDDD;
+a {
+  color: var(--accent-color);
+  font-size: 14px;
+  text-decoration: none;
+  margin: 15px 0;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+.form-input .label {
+  position: absolute;
+  left: 40px; /* 与图标对齐 */
+  top: 20%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  padding: 0 4px;
+  background-color: transparent;
+  font-size: 14px;
+}
+
+.form-input input:focus ~ .label,
+.form-input input:valid ~ .label {
+  top: 0;
+  font-size: 12px;
+  color: var(--accent-color);
+  background-color: var(--accent-dark);
+  transform: translateY(-50%) scale(0.85);
+}
+
+.error-message {
+  color: var(--danger-color);
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+button.loading {
+  position: relative;
+  color: transparent;
+}
+
+button.loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  border: 3px solid transparent;
+  border-top-color: var(--text-primary);
   border-radius: 50%;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0 5px;
-  height: 40px;
-  width: 40px;
+  animation: button-loading-spinner 1s ease infinite;
 }
 
-.auth {
-  background: #f6f5f7;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  font-family: 'Montserrat', sans-serif;
-  height: 90vh;
-  margin: 0;
+@keyframes button-loading-spinner {
+  from {
+    transform: rotate(0turn);
+  }
+  to {
+    transform: rotate(1turn);
+  }
 }
-
-.title {
-  font-size: 2.5rem;
-  margin-bottom: 2rem;
-  color: #2c3e50;
-}
-
-/* 其余样式保持不变 */
 </style>
