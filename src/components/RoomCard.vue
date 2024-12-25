@@ -254,6 +254,10 @@ const getDifficultyLabel = (difficulty) => {
   align-items: center;
   gap: 1rem;
   color: #909399;
+
+  span {
+    font-size: 0.6rem;
+  }
 }
 
 .waiting-avatar {

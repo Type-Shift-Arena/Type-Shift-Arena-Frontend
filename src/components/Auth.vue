@@ -227,6 +227,8 @@ const doSignUp = async () => {
   align-items: center;
   flex-direction: column;
   font-family: 'Montserrat', sans-serif;
+  position: relative;
+  top: 60px;
   height: 80vh;
   margin: 0;
 }
