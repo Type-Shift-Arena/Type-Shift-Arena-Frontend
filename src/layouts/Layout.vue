@@ -11,6 +11,7 @@ import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
 import { ElNotification } from "element-plus";
 import Friends from "../components/Friends/Friends.vue";
+import { getVisibleNavigators } from "@/config/navigatorAssets";
 
 const router = useRouter();
 const route = useRoute();
@@ -22,9 +23,20 @@ const userInfo = reactive({
   avatarUrl,
   nickname
 })
+const isSidebarExpanded = ref(false)
+const showSidebar = ref(false) // 控制侧边栏是否显示
+const currentRoute = computed(() => route.path)
+const menuItems = computed(() => {
+  const userPermissions = ['user'];
+  return getVisibleNavigators(userPermissions);
+});
+
 let isShow=ref(false)
+let tokenCheckInterval;  // 检查token的定时器
+
 provide('userInfo',userInfo)
 
+// 检查Token有效期
 const checkTokenExpiration = () => {
   const token = localStorage.getItem("token");
   if (!token) return;
@@ -49,8 +61,29 @@ const checkTokenExpiration = () => {
   }
 }
 
-// Check token every minute
-let tokenCheckInterval;
+// 退出账号
+const logout = () => {
+  localStorage.removeItem('token')
+  delete axios.defaults.headers.common['Authorization']
+  store.isLoggedIn = false
+  ElNotification({
+    title: '退出账号',
+    message: '你成功的退出的账号',
+    type: 'success',
+    duration: 1500,
+  });
+  router.push('/auth')
+}
+
+// 展开侧边栏
+const expandSidebar = () => {
+  isSidebarExpanded.value = true
+}
+
+// 收起侧边栏
+const collapseSidebar = () => {
+  isSidebarExpanded.value = false
+}
 
 onMounted(() => {
   // Initial check
@@ -65,21 +98,6 @@ onBeforeUnmount(() => {
   }
 });
 
-const logout = () => {
-  localStorage.removeItem('token')
-  delete axios.defaults.headers.common['Authorization']
-  store.isLoggedIn = false
-  ElNotification({
-    title: '退出账号',
-    message: '你成功的退出的账号',
-    type: 'success',
-    duration: 1500,
-  });
-  router.push('/auth')
-}
-
-const isSidebarExpanded = ref(false)
-const showSidebar = ref(false) // 控制侧边栏是否显示
 
 // 监听登录状态变化
 watch(() => store.isLoggedIn, (newValue) => {
@@ -94,22 +112,6 @@ watch(() => store.isLoggedIn, (newValue) => {
     isSidebarExpanded.value = false
   }
 }, { immediate: true })
-
-const currentRoute = computed(() => route.path)
-
-const menuItems = [
-  { path: '/game-lobby', label: '游戏大厅', icon: 'sports_esports' },
-  { path: '/personal', label: '个人中心', icon: 'person' },
-  { path: '/settings', label: '设置', icon: 'settings' },
-]
-
-const expandSidebar = () => {
-  isSidebarExpanded.value = true
-}
-
-const collapseSidebar = () => {
-  isSidebarExpanded.value = false
-}
 </script>
 
 <template>
@@ -301,6 +303,8 @@ nav {
   overflow: hidden;
   box-shadow: var(--shadow-md);
   z-index: 100;
+  border-right: 1px solid var(--border-color);
+  border-radius: 0 12px 12px 0;
 }
 
 .sidebar.expanded {

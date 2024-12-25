@@ -7,9 +7,11 @@
   import { createRouter, createWebHistory } from 'vue-router'
   import Home from '@/components/Home.vue'
   import Auth from '@/components/Auth.vue'
+  import TypingPractice from '@/components/TypingPractice.vue'
   import Layout from '@/layouts/Layout.vue'
   import Settings from '@/views/Settings.vue'
   import GameLobby from '@/views/GameLobby.vue'
+  import MatchmakingLobby from '@/views/MatchmakingLobby.vue'
   import GameRoom from '@/views/GameRoom.vue'
   import Personal from '../components/Personal.vue'
 
@@ -53,8 +55,15 @@
         {
           path: 'typing-practice',
           name: 'typingPractice',
-          component: () => import('@/components/TypingPractice.vue')
-        }
+          component: TypingPractice,
+          meta: { requiresAuth: true }
+        },
+        {
+          path: 'macth-make-lobby',
+          name: 'matchMakingLobby',
+          component: MatchmakingLobby,
+          meta: { requiresAuth: true }
+        },
         // {
         //   path: 'game-lobby',
         //   name: 'gameLobby',
