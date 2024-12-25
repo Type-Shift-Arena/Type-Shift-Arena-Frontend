@@ -8,7 +8,6 @@ import { LANGUAGE_ASSETS } from '@/config/languageAssets'
 import { setLocale } from '@/i18n'
 
 const { locale, t } = useI18n()
-const activeTab = ref('sound')
 
 // 动态生成语言选项
 const languageOptions = computed(() => 
