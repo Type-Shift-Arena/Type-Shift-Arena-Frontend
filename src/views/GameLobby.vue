@@ -95,7 +95,7 @@
       </div>
       <div class="room-stats">
         <span class="room-count">当前房间数: {{ totalRooms }}</span>
-        <button class="create-room-btn" @click="createRoom">
+        <button class="create-room-btn" @click="showCreateDialog = true">
           创建房间
         </button>
       </div>
@@ -139,6 +139,12 @@
       {{ error }}
       <button @click="fetchRooms">重试</button>
     </div>
+
+    <!-- 创建房间对话框 -->
+    <CreateRoomDialog
+      v-model:visible="showCreateDialog"
+      @create="handleCreateRoom"
+    />
   </div>
 </template>
 
@@ -153,6 +159,7 @@ import {
   DIFFICULTY_OPTIONS,
   getAvailableOptions 
 } from '@/config/gameRoomAssets'
+import CreateRoomDialog from '@/components/GameRoom/CreateRoomDialog.vue'
 
 const router = useRouter()
 const rooms = ref([])
@@ -165,6 +172,7 @@ const searchQuery = ref('')
 const searchActive = ref(false)
 const isSearching = ref(false)
 const searchResults = ref([])
+const showCreateDialog = ref(false)
 
 // 筛选相关状态
 const showFilterMenu = ref(false)
@@ -459,6 +467,18 @@ const createRoom = () => {
 // 加入房间
 const joinRoom = (roomId) => {
   router.push(`/game-room/${roomId}`)
+}
+
+// 处理创建房间
+const handleCreateRoom = async (config) => {
+  try {
+    // 这里添加创建房间的逻辑
+    console.log('创建房间配置:', config)
+    // const response = await createRoom(config)
+    // 创建成功后的处理...
+  } catch (error) {
+    console.error('创建房间失败:', error)
+  }
 }
 
 onMounted(() => {
