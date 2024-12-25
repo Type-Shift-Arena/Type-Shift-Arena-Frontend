@@ -27,22 +27,6 @@ export const LANGUAGE_OPTIONS = {
     icon: 'language',
     availableIn: ['matchmaking', 'custom']
   },
-  japanese: {
-    label: '日语',
-    value: 'JAPANESE',
-    icon: 'translate',
-    availableIn: ['custom'],
-    requirements: {
-      level: 10
-    }
-  },
-  comingSoon: {
-    label: '敬请期待',
-    value: 'COMING_SOON',
-    disabled: true,
-    icon: 'hourglass_empty',
-    availableIn: ['matchmaking']
-  }
 };
 
 /**
