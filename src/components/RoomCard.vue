@@ -4,7 +4,7 @@
     <div class="room-header">
       <span class="room-id">房间号: {{ room.roomId }}</span>
       <span class="room-status" :class="room.status">
-        {{ room.status === 'waiting' ? '等待中' : '游戏中' }}
+        {{ room.status === 'WAITING' ? '等待中' : '游戏中' }}
       </span>
     </div>
     
@@ -133,6 +133,10 @@ const getDifficultyLabel = (difficulty) => {
   transition: all 0.3s ease;
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #e4e4e4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 250px;
 }
 
 .room-card:hover {
@@ -145,7 +149,7 @@ const getDifficultyLabel = (difficulty) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  flex: 0 0 20px;
 }
 
 .room-status {
@@ -168,10 +172,10 @@ const getDifficultyLabel = (difficulty) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 1rem 0;
-  padding: 0.5rem;
+  padding: 0.75rem;
   background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
+  min-height: 70px;
 }
 
 .player-info {
@@ -280,8 +284,7 @@ const getDifficultyLabel = (difficulty) => {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.5rem;
-  margin: 0.75rem 0;
-  font-size: 0.9rem;
+  flex: 0 0 48px;
 }
 
 .info-item {
@@ -289,6 +292,7 @@ const getDifficultyLabel = (difficulty) => {
   align-items: center;
   gap: 0.4rem;
   color: #9ca3af;
+  font-size: 0.8rem;
 }
 
 .info-item i {
@@ -298,6 +302,7 @@ const getDifficultyLabel = (difficulty) => {
 .room-actions {
   display: flex;
   justify-content: center;
+  flex: 0 0 36px;
 }
 
 .join-btn {
@@ -326,8 +331,17 @@ const getDifficultyLabel = (difficulty) => {
 }
 
 @media (max-width: 1280px) {
-  .player-name {
-    max-width: 80px;
+  .room-card {
+    gap: 0.5rem;
+  }
+  
+  .players-container {
+    padding: 0.5rem;
+    min-height: 70px;
+  }
+  
+  .room-info {
+    gap: 0.25rem;
   }
 }
 </style>

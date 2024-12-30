@@ -5,10 +5,6 @@ defineProps({
     required: true,
     // 包含 username, wpm, accuracy, errorCount
   },
-  myProgress: {
-    type: Number,
-    required: true
-  },
   opponentStats: {
     type: Object,
     required: true,
@@ -54,11 +50,11 @@ defineProps({
           <span>WPM: {{ myStats.wpm }}</span>
           <span>准确率: {{ myStats.accuracy }}%</span>
           <span>错误: {{ myStats.errorCount }}</span>
-          <span>进度: {{ myProgress }}%</span>
+          <span>进度: {{ myStats.progress }}%</span>
         </div>
       </div>
       <div class="progress-bar">
-        <div class="progress" :style="{ width: `${myProgress}%` }"></div>
+        <div class="progress" :style="{ width: `${myStats.progress}%` }"></div>
       </div>
     </div>
 
@@ -116,9 +112,10 @@ defineProps({
   margin-bottom: 2rem;
   gap: 2rem;
   padding: 1rem;
-  background: white;
+  background: var(--primary-dark);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .player-stats {
@@ -137,7 +134,7 @@ defineProps({
 .player-info h3 {
   margin: 0;
   font-size: 1.2rem;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .vs-container {
@@ -150,19 +147,19 @@ defineProps({
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: #42b983;
+  background: var(--accent-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-primary);
   font-weight: bold;
   font-size: 1.2rem;
-  box-shadow: 0 2px 4px rgba(66, 185, 131, 0.2);
+  box-shadow: 0 2px 4px var(--shadow-color);
 }
 
 .progress-bar {
   height: 12px;
-  background: #eee;
+  background: var(--accent-dark);
   border-radius: 6px;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -170,7 +167,7 @@ defineProps({
 
 .progress {
   height: 100%;
-  background: #42b983;
+  background: var(--accent-color);
   transition: width 0.3s ease;
 }
 
@@ -183,16 +180,17 @@ defineProps({
 }
 
 .player-stats .stats span {
-  background: rgba(66, 185, 131, 0.1);
+  background: var(--accent-dark);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   white-space: nowrap;
   transition: all 0.3s ease;
   animation: fadeIn 0.3s ease;
+  color: var(--text-primary);
 }
 
 .opponent .stats span {
-  background: rgba(44, 62, 80, 0.1);
+  background: var(--secondary-dark);
 }
 
 .opponent.player-stats {
@@ -218,22 +216,22 @@ defineProps({
   height: 100%;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.6) 50%,
-    rgba(255, 255, 255, 0) 100%
+    var(--skeleton-start) 0%,
+    var(--skeleton-middle) 50%,
+    var(--skeleton-end) 100%
   );
   animation: shimmer 1.5s infinite linear;
   background-size: 200% 100%;
 }
 
 .skeleton h3 {
-  color: #eee !important;
-  background: #eee;
+  color: var(--skeleton-color) !important;
+  background: var(--skeleton-background);
   border-radius: 4px;
 }
 
 .skeleton .progress-bar {
-  background: #eee;
+  background: var(--skeleton-background);
 }
 
 @keyframes shimmer {
@@ -268,7 +266,7 @@ defineProps({
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  border: 2px solid #42b983;
+  border: 2px solid var(--accent-color);
 }
 
 .player-title {
@@ -278,8 +276,8 @@ defineProps({
 }
 
 .host-badge {
-  background: #42b983;
-  color: white;
+  background: var(--accent-color);
+  color: var(--text-primary);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -291,6 +289,6 @@ defineProps({
 }
 
 .opponent .player-avatar {
-  border-color: #2c3e50;
+  border-color: var(--secondary-color);
 }
 </style>
