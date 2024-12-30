@@ -1,8 +1,6 @@
 /*
  * @Author: hiddenSharp429 z404878860@163.com
  * @Date: 2024-10-28 19:44:55
- * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-10-30 13:06:32
  */
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
