@@ -14,7 +14,7 @@
           <RevolverCylinder 
             class="cylinder-bg"
             :options="languages"
-            :selectedValue="selectedLanguage"
+            :selectedValue="roomConfig.language"
             @select="selectLanguage"
           />
         </div>
@@ -25,7 +25,7 @@
           <RevolverCylinder 
             class="cylinder-bg"
             :options="categories"
-            :selectedValue="selectedCategory"
+            :selectedValue="roomConfig.category"
             @select="selectCategory"
           />
         </div>
@@ -36,7 +36,7 @@
           <RevolverCylinder 
             class="cylinder-bg"
             :options="difficulties"
-            :selectedValue="selectedDifficulty"
+            :selectedValue="roomConfig.difficulty"
             @select="selectDifficulty"
           />
         </div>
@@ -58,9 +58,9 @@
     <MatchingScreen
       v-if="isMatching"
       :matchingOptions="{
-        language: selectedLanguage,
-        category: selectedCategory,
-        difficulty: selectedDifficulty
+        language: roomConfig.language,
+        category: roomConfig.category,
+        difficulty: roomConfig.difficulty
       }"
       @cancel="cancelMatching"
     />
@@ -68,57 +68,69 @@
 </template>
   
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import ScopeButton from '@/components/ScopeButton.vue'
 import MatchingScreen from '@/components/MatchingScreen.vue'
 import { 
-  LANGUAGE_OPTIONS,
-  CATEGORY_OPTIONS,
-  DIFFICULTY_OPTIONS,
-  MODE_OPTIONS,
-  DEFAULT_OPTIONS,
-  getAvailableOptions
+  languageOptionsState,
+  categoryOptionsState, 
+  difficultyOptionsState,
+  DEFAULT_OPTIONS
 } from '@/config/gameRoomAssets'
 import RevolverCylinder from '@/components/RevolverCylinder.vue'
 
 const isMatching = ref(false)
-const languageRotation = ref(0)
-const categoryRotation = ref(0)
-const difficultyRotation = ref(0)
 
-const userInfo = {
-  level: 5,
-  permissions: ['basic_user']
-}
+// 房间配置
+const roomConfig = ref({
+  language: DEFAULT_OPTIONS.matchmaking.language,
+  category: DEFAULT_OPTIONS.matchmaking.category,
+  difficulty: DEFAULT_OPTIONS.matchmaking.difficulty
+})
 
-// 获取匹配大厅可用的选项
-const languages = getAvailableOptions(LANGUAGE_OPTIONS, 'matchmaking', userInfo)
-const categories = getAvailableOptions(CATEGORY_OPTIONS, 'matchmaking', userInfo)
-const difficulties = getAvailableOptions(DIFFICULTY_OPTIONS, 'matchmaking', userInfo)
+// 计算属性：等待数据加载完成后再获取选项
+const languages = computed(() => {
+  const { options, loading } = languageOptionsState.value
+  if (loading) return []
+  
+  return Object.values(options).map(option => ({
+    ...option,
+    disabled: option.disabled || !option.availableIn.includes('matchmaking')
+  }))
+})
 
-// 使用默认选项
-const selectedLanguage = ref(DEFAULT_OPTIONS.matchmaking.language)
-const selectedCategory = ref(DEFAULT_OPTIONS.matchmaking.category)
-const selectedDifficulty = ref(DEFAULT_OPTIONS.matchmaking.difficulty)
+const categories = computed(() => {
+  const { options, loading } = categoryOptionsState.value
+  if (loading) return []
+  
+  return Object.values(options).map(option => ({
+    ...option,
+    disabled: option.disabled || !option.availableIn.includes('matchmaking')
+  }))
+})
 
+const difficulties = computed(() => {
+  const { options, loading } = difficultyOptionsState.value
+  if (loading) return []
+  
+  return Object.values(options).map(option => ({
+    ...option,
+    disabled: !option.availableIn.includes('matchmaking')
+  }))
+})
+
+// 选择处理函数
 const selectLanguage = (value) => {
-  const selectedLang = languages.find(l => l.value === value)
-  if (selectedLang?.disabled) return
-  selectedLanguage.value = value
+  roomConfig.value.language = value
 }
 
 const selectCategory = (value) => {
-  selectedCategory.value = value
+  roomConfig.value.category = value
 }
 
 const selectDifficulty = (value) => {
-  selectedDifficulty.value = value
+  roomConfig.value.difficulty = value
 }
-
-const isValid = computed(() => {
-  const validLanguage = selectedLanguage.value && selectedLanguage.value !== 'COMING_SOON'
-  return validLanguage && selectedCategory.value && selectedDifficulty.value
-})
 
 const startMatching = () => {
   isMatching.value = true
@@ -132,6 +144,55 @@ const cancelMatching = () => {
     subscriptions.value.delete(`matchmaking_${playerId}`)
   }
 }
+
+// 验证配置是否完整
+const isValid = computed(() => {
+  const selectedLanguageOption = languages.value
+    .find(option => option.value === roomConfig.value.language)
+  
+  const selectedCategoryOption = categories.value
+    .find(option => option.value === roomConfig.value.category)
+  
+  const validLanguage = selectedLanguageOption && !selectedLanguageOption.disabled
+  const validCategory = selectedCategoryOption && !selectedCategoryOption.disabled
+  
+  return validLanguage && 
+         validCategory && 
+         roomConfig.value.difficulty
+})
+
+// 监听语言变化，加载对应的类型选项
+watch(() => roomConfig.value.language, async (newLanguage, oldLanguage) => {
+  if (newLanguage !== oldLanguage) {
+    roomConfig.value.category = ''
+    roomConfig.value.difficulty = ''
+    
+    if (newLanguage) {
+      await categoryOptionsState.value.refresh(newLanguage)
+    }
+  }
+})
+
+// 监听类型变化，加载对应的难度选项
+watch(() => roomConfig.value.category, async (newCategory, oldCategory) => {
+  if (newCategory !== oldCategory) {
+    roomConfig.value.difficulty = ''
+    
+    if (newCategory && roomConfig.value.language) {
+      await difficultyOptionsState.value.refresh(
+        roomConfig.value.language,
+        newCategory
+      )
+    }
+  }
+})
+
+onMounted(async () => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    await languageOptionsState.value.initialize()
+  }
+})
 </script>
   
 <style scoped>

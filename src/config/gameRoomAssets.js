@@ -11,9 +11,52 @@
  * @property {string[]} [requirements.permissions] - 需要的权限
  */
 
+import { ref, computed } from 'vue'
+import { fetchAvailableLanguages, convertToGameOptions } from '@/api/modules/game/gameLanguages'
+import { fetchCategoriesByLanguage, convertToGameOptions as convertCategoryOptions } from '@/api/modules/game/gameCategories'
+import { fetchDifficultiesByLanguageAndCategory, convertToGameOptions as convertDifficultyOptions } from '@/api/modules/game/gameDifficulties'
+
+
 /**
  * 语言选项配置
  */
+
+// 使用 ref 创建响应式的语言选项
+const _languageOptions = ref({})
+const _loading = ref(true)
+const _error = ref(null)
+
+// 定义语言选项函数
+const initializeLanguageOptions = async () => {
+  if (!_loading.value && Object.keys(_languageOptions.value).length > 0) {
+    return _languageOptions.value
+  }
+
+  try {
+    _loading.value = true
+    _error.value = null
+    const languages = await fetchAvailableLanguages()
+    _languageOptions.value = convertToGameOptions(languages)
+  } catch (err) {
+    console.error('Failed to initialize language options:', err)
+    _error.value = err
+    _languageOptions.value = {} // 降级为空对象
+  } finally {
+    _loading.value = false
+  }
+}
+
+// 导出语言选项状态
+export const languageOptionsState = computed(() => ({
+  options: _languageOptions.value,
+  loading: _loading.value,
+  error: _error.value,
+  refresh: initializeLanguageOptions,
+  initialize: initializeLanguageOptions
+}))
+
+
+// 为了保持向后兼容，仍然导出 LANGUAGE_OPTIONS
 export const LANGUAGE_OPTIONS = {
   chinese: {
     label: '中文',
@@ -32,6 +75,40 @@ export const LANGUAGE_OPTIONS = {
 /**
  * 游戏类型配置
  */
+
+// 使用 ref 创建响应式的类型选项
+const _categoryOptions = ref({})
+const _categoryLoading = ref(true)
+const _categoryError = ref(null)
+
+const initializeCategoryOptions = async (language) => {
+  if (!language) {
+    _categoryOptions.value = {}
+    return
+  }
+
+  try {
+    _categoryLoading.value = true
+    _categoryError.value = null
+    const categories = await fetchCategoriesByLanguage(language)
+    _categoryOptions.value = convertCategoryOptions(categories)
+  } catch (err) {
+    console.error('Failed to initialize category options:', err)
+    _categoryError.value = err
+    _categoryOptions.value = {} // 降级为空对象
+  } finally {
+    _categoryLoading.value = false
+  }
+}
+
+export const categoryOptionsState = computed(() => ({
+  options: _categoryOptions.value,
+  loading: _categoryLoading.value,
+  error: _categoryError.value,
+  refresh: initializeCategoryOptions
+}))
+
+// 为了保持向后兼容，仍然导出 CATEGORY_OPTIONS
 export const CATEGORY_OPTIONS = {
   dailyChat: {
     label: '日常对话',
@@ -74,35 +151,58 @@ export const CATEGORY_OPTIONS = {
 /**
  * 难度等级配置
  */
+
+// 使用 ref 创建响应式的难度选项
+const _difficultyOptions = ref({})
+const _difficultyLoading = ref(true)
+const _difficultyError = ref(null)
+
+const initializeDifficultyOptions = async (language, category) => {
+  if (!language || !category) {
+    _difficultyOptions.value = {}
+    return
+  }
+
+  try {
+    _difficultyLoading.value = true
+    _difficultyError.value = null
+    const difficulties = await fetchDifficultiesByLanguageAndCategory(language, category)
+    _difficultyOptions.value = convertDifficultyOptions(difficulties)
+  } catch (err) {
+    console.error('Failed to initialize difficulty options:', err)
+    _difficultyError.value = err
+    _difficultyOptions.value = {} // 降级为空对象
+  } finally {
+    _difficultyLoading.value = false
+  }
+}
+
+// 导出响应式的难度选项状态
+export const difficultyOptionsState = computed(() => ({
+  options: _difficultyOptions.value,
+  loading: _difficultyLoading.value,
+  error: _difficultyError.value,
+  refresh: initializeDifficultyOptions
+}))
+
+// 为了保持向后兼容，仍然导出 DIFFICULTY_OPTIONS
 export const DIFFICULTY_OPTIONS = {
-  easy: {
+  EASY: {
     label: '简单',
     value: 'EASY',
-    icon: 'sentiment_satisfied',
     availableIn: ['matchmaking', 'custom']
   },
-  medium: {
+  MEDIUM: {
     label: '中等',
     value: 'MEDIUM',
-    icon: 'sentiment_neutral',
     availableIn: ['matchmaking', 'custom']
   },
-  hard: {
+  HARD: {
     label: '困难',
     value: 'HARD',
-    icon: 'sentiment_very_dissatisfied',
     availableIn: ['matchmaking', 'custom']
-  },
-  expert: {
-    label: '专家',
-    value: 'EXPERT',
-    icon: 'psychology',
-    availableIn: ['custom'],
-    requirements: {
-      level: 15
-    }
   }
-};
+}
 
 /**
  * 游戏模式配置
@@ -156,26 +256,40 @@ export const DEFAULT_OPTIONS = {
  * @returns {GameOption[]} 过滤后的选项数组
  */
 export const getAvailableOptions = (optionsObject, scene, userInfo = { level: 0, permissions: [] }) => {
+  // 确保 optionsObject 存在且不为空
+  if (!optionsObject || typeof optionsObject !== 'object') {
+    console.warn('Invalid options object:', optionsObject)
+    return []
+  }
+
+  // 如果是语言选项且正在加载，返回空数组
+  if (optionsObject === LANGUAGE_OPTIONS.value && _loading.value) {
+    return []
+  }
+
   return Object.values(optionsObject).filter(option => {
-    // 检查是否在指定场景可用
-    if (!option.availableIn?.includes(scene)) return false;
-    
-    // 检查等级要求
-    if (option.requirements?.level && userInfo.level < option.requirements.level) {
-      return false;
-    }
+    // 确保 option 对象存在
+    if (!option) return false
+
+    // 检查 availableIn 属性
+    if (!option.availableIn || !Array.isArray(option.availableIn)) return false
+    if (!option.availableIn.includes(scene)) return false
     
     // 检查权限要求
+    if (option.requirements?.level && userInfo.level < option.requirements.level) {
+      return false
+    }
+    
     if (option.requirements?.permissions) {
       const hasAllPermissions = option.requirements.permissions.every(
         permission => userInfo.permissions.includes(permission)
-      );
-      if (!hasAllPermissions) return false;
+      )
+      if (!hasAllPermissions) return false
     }
     
-    return true;
-  });
-};
+    return true
+  })
+}
 
 /**
  * 验证选项是否可用
