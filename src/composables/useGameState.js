@@ -1,22 +1,25 @@
 /*
  * @Author: hiddenSharp429 z404878860@163.com
  * @Date: 2024-11-14 19:40:25
- * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-15 21:41:54
+ * @LastEditors: Please set LastEditors
+ * @LastEditTime: 2024-12-30 22:29:05
  */
 import { ElNotification } from 'element-plus'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { usePlayerStats } from './usePlayerStats'
 
 export function useGameState(roomId, stompClient) {
-  const gameStatus = ref('waiting')
+  // 初始化 playerStats
+  const playerStats = usePlayerStats(roomId, stompClient)
+  const gameStatus = ref('')
   const players = ref([])
   const targetText = ref('')
   const playerId = ref(localStorage.getItem('userId'))
-  const opponentInfo = ref(null)
-  const myInfo = ref(null)
   const isMatching = ref(false) // 添加匹配状态
-  const processedMessages = ref(new Set()) // 添加消息去重集合
-  
+  const processedMessages = ref(new Set())
+  const myInfo = playerStats.myInfo
+  const opponentInfo = playerStats.opponentInfo
+
   // 计算是否为房主
   const isHost = computed(() => {
     const currentPlayerId = String(playerId.value)
@@ -27,72 +30,28 @@ export function useGameState(roomId, stompClient) {
   // 计算房间是否满员
   const isRoomFull = computed(() => players.value.length >= 2)
 
-  // 重置游戏
-  const resetGame = () => {
-    gameStatus.value = 'waiting'
-    // 保留当前玩家
-    players.value = players.value.filter(id => id === playerId.value)
-  }
-
-  // 切换游戏状态
-  const toggleGameStatus = () => {
-    const statusMap = {
-      'waiting': 'ready',
-      'ready': 'playing',
-      'playing': 'finished',
-      'finished': 'waiting'
-    }
-    gameStatus.value = statusMap[gameStatus.value]
-  }
-
   // 处理玩家加入
   const handlePlayerJoin = (data) => {
-    const joinedPlayerId = String(data.playerId)
-    
-    if (!players.value.includes(joinedPlayerId)) {
-      players.value = [...players.value, joinedPlayerId]
-      
-      if (players.value.length >= 2) {
-        console.log('房间满员，准备开始游戏')
-        gameStatus.value = 'ready'
-        if (isHost.value) {
-          console.log('作为房主开始游戏，3秒后开始')
-          setTimeout(startGame, 3000)
-        }
-      }
-    }
+    // 更新玩家信息
+    playerStats.updatePlayerInfo(data)
   }
 
   // 处理玩家离开
   const handlePlayerLeave = (data) => {
-    const leftPlayerId = String(data.playerId)
-    // 从玩家列表中移除离开的玩家
-    players.value = players.value.filter(id => id !== leftPlayerId)
-    // 如果对手离开，重置对手信息
-    if (opponentInfo.value?.id === leftPlayerId) {
-      opponentInfo.value = null
-    }
-    // 如果房间变空，重置游戏状态
-    if (players.value.length < 2) {
-      gameStatus.value = 'waiting'
-    }
-  }
+    // const leftPlayerId = String(data.playerId)
+    // // 从玩家列表中移除离开的玩家
+    // players.value = players.value.filter(id => id !== leftPlayerId)
+    // // 如果对手离开，重置对手信息
+    // if (opponentInfo.value?.id === leftPlayerId) {
+    //   opponentInfo.value = null
+    // }
+    // // 如果房间变空，重置游戏状态
+    // if (players.value.length < 2) {
+    //   gameStatus.value = 'waiting'
+    // }
 
-  // 开始游戏
-  const startGame = () => {
-    if (stompClient.value?.connected) {
-      console.log('发送游戏开始消息')
-      stompClient.value.publish({
-        destination: `/app/room/${roomId}/start`,
-        body: JSON.stringify({
-          type: 'GAME_START',
-          playerId: playerId.value,
-          timestamp: new Date().toISOString()
-        })
-      })
-    } else {
-      console.error('无法开始游戏：WebSocket未连接')
-    }
+    // 更新玩家信息
+    playerStats.updatePlayerInfo(data)
   }
 
   // 请求房间信息的函数
@@ -103,7 +62,7 @@ export function useGameState(roomId, stompClient) {
     }
 
     console.log(`[GameState] 请求房间信息: roomId=${roomId}, playerId=${playerId}`)
-    
+  
     stompClient.value.publish({
       destination: `/app/room/${roomId}/info`,
       body: JSON.stringify({
@@ -119,7 +78,7 @@ export function useGameState(roomId, stompClient) {
   // 处理房间消息
   const handleRoomInfo = (message) => {
     if (!message) return
-    
+
     console.log('[GameState] 收到房间消息:', message)
 
     // 防止重复处理相同消息
@@ -138,20 +97,9 @@ export function useGameState(roomId, stompClient) {
 
     if (message.type === 'GAME_INFO') {
       console.log("[GameState] 处理房间信息:", message)
-      // 更新玩家信息
-      if (message.playerId === playerId.value) {
-        myInfo.value = {
-          id: message.playerId,
-          name: message.playerName,
-          avatar: message.playerAvatar,
-          isHost: message.isHost
-        }
-        opponentInfo.value = {
-          id: message.opponentId,
-          name: message.opponentName,
-          avatar: message.opponentAvatar
-        }
-      }
+      
+      // 使用 playerStats 的方法更新玩家信息
+      playerStats.updatePlayerInfo(message)
 
       // 更新玩家列表
       if (message.playersId) {
@@ -167,36 +115,37 @@ export function useGameState(roomId, stompClient) {
       if (message.targetText) {
         targetText.value = message.targetText
       }
-    }
+    } 
 
     if (message.type === 'PLAYER_READY') {
       console.log("[GameState] 处理玩家准备消息:", message)
+      
+      // 设置房间状态
+      gameStatus.value = message.roomStatus
+      console.log("[GameState] 设置房间状态:", gameStatus.value)
+
       const isReady = message.isReady
-      if (isReady){
-        ElNotification({
-          title: '玩家准备',
-          message: '对手已准备好',
-          type: 'success',
-          duration: 1500,
-        });
-      }else{
-        ElNotification({
-          title: '取消准备',
-          message: '对手取消准备',
-          type: 'warning',
-          duration: 1500,
-        });
-      }
-      opponentInfo.value = { 
+      
+      opponentInfo.value = {
         ...opponentInfo.value,
-        isReady: message.isReady 
+        isReady: isReady
       }
+      
+      // 显示通知
+      ElNotification({
+        title: isReady ? '玩家准备' : '取消准备',
+        message: isReady ? '对手已准备好' : '对手取消准备',
+        type: isReady ? 'success' : 'warning',
+        duration: 1500,
+      });
     }
 
     if (message.type === 'GAME_START') {
       console.log('[GameState] 处理游戏开始消息:', message)
-
-      gameStatus.value = 'playing'
+      
+      // 设置房间状态
+      gameStatus.value = message.roomStatus
+      console.log("[GameState] 设置房间状态:", gameStatus.value)
       
       if (message.targetText) {
         targetText.value = message.targetText
@@ -216,7 +165,7 @@ export function useGameState(roomId, stompClient) {
       window.dispatchEvent(new CustomEvent('game-start', {
         detail: {
           targetText: message.targetText,
-          startTime: message.startTime || new Date().getTime()
+          startTime: message.timestamp
         }
       }))
     }
@@ -226,7 +175,6 @@ export function useGameState(roomId, stompClient) {
       window.dispatchEvent(new CustomEvent('game-progress', {
         detail: {
           playerId: message.playerId,
-          percentage: message.percentage,
           stats: message.stats
         }
       }))
@@ -234,7 +182,10 @@ export function useGameState(roomId, stompClient) {
 
     if (message.type === 'GAME_FINISH') {
       console.log('[GameState] 游戏结束:', message)
-      gameStatus.value = 'finished'
+
+      // 设置房间状态
+      gameStatus.value = message.roomStatus
+      console.log("[GameState] 设置房间状态:", gameStatus.value)
       
       // 触发游戏结束事件
       window.dispatchEvent(new CustomEvent('game-finish', {
@@ -245,15 +196,49 @@ export function useGameState(roomId, stompClient) {
       }))
     }
 
+    if (message.type === 'GAME_RESULT') {
+      console.log('[GameState] 处理游戏结果:', message)
+      window.dispatchEvent(new CustomEvent('game-result', {
+        detail: {
+          match: message.match,
+          oldScore: message.oldScore,
+          scoreChange: message.scoreChange
+        }
+      }))
+    }
+
     if (message.type === 'PLAYER_LEAVE') {
       console.log('[GameState] 玩家离开:', message)
+      
+      // 设置房间状态
+      gameStatus.value = message.roomStatus
+      console.log("[GameState] 设置房间状态:", gameStatus.value)
+
+      ElNotification.closeAll() // 清除所有通知
       ElNotification({
         title: '玩家离开',
-        message: '对手已离开',
-        type: 'warning',
+        message: `对手已离开`,
+        type: 'info',
         duration: 1500,
       });
       handlePlayerLeave(message)
+    }
+
+    if (message.type === 'PLAYER_JOIN') {
+      console.log('[GameState] 玩家加入:', message)
+
+      // 设置房间状态
+      gameStatus.value = message.roomStatus
+      console.log("[GameState] 设置房间状态:", gameStatus.value)
+
+      ElNotification.closeAll() // 清除所有通知
+      ElNotification({
+        title: '玩家加入',
+        message: `玩家：${message.opponentName}，已加入`,
+        type: 'info',
+        duration: 1500,
+      });
+      handlePlayerJoin(message)
     }
   }
 
@@ -277,10 +262,28 @@ export function useGameState(roomId, stompClient) {
       })
     })
   }
+  
+  // 开始游戏
+  const startGame = () => {
+    if (stompClient.value?.connected) {
+      console.log('发送游戏开始消息')
+      stompClient.value.publish({
+        destination: `/app/room/${roomId}/start`,
+        body: JSON.stringify({
+          type: 'GAME_START',
+          playerId: playerId.value,
+          timestamp: new Date().toISOString()
+        })
+      })
+    } else {
+      console.error('无法开始游戏：WebSocket未连接')
+    }
+  }
 
-  // 添加结束游戏的方法
+  // 结束游戏
   const finishGame = (playerId) => {
     if (stompClient.value?.connected) {
+      console.log('发送游戏结束消息')
       stompClient.value.publish({
         destination: `/app/room/${roomId}/finish`,
         body: JSON.stringify({
@@ -292,55 +295,80 @@ export function useGameState(roomId, stompClient) {
     }
   }
 
+  // 加入房间
+  const joinRoom = async (roomId, playerId, playerName) => {
+    try {
+      // 发送加入房间消息
+      if (stompClient.value?.connected) {
+        stompClient.value.publish({
+          destination: `/app/room/${roomId}/join`,
+          body: JSON.stringify({
+            type: 'PLAYER_JOIN',
+            playerId: playerId,
+            playerName: playerName,
+          })
+        })
+      }
+    } catch (error) {
+      console.error('加入房间失败:', error)
+      throw error
+    }
+  }
+
   // 离开房间
-  const leaveRoom = async (stompClient, subscriptions, router) => {
+  const leaveRoom = async (subscriptions) => {
     try {
       // 发送离开房间消息
-      if (stompClient?.connected) {
-        stompClient.publish({
+      const playerId = localStorage.getItem('userId')
+      const playerName = localStorage.getItem('userName')
+      if (stompClient.value?.connected) {
+        console.log(`[GameState] 发送离开房间消息: playerId=${playerId}, playerName=${playerName}`)
+        stompClient.value.publish({
           destination: `/app/room/${roomId}/leave`,
           body: JSON.stringify({
             type: 'PLAYER_LEAVE',
-            playerId: localStorage.getItem('userId'),
-            timestamp: Date.now()
+            playerId: playerId,
+            playerName: playerName,
           })
         })
       }
 
       // 清理订阅
-      const playerId = localStorage.getItem('userId')
-      if (subscriptions.has(`room_${roomId}`)) {
-        subscriptions.get(`room_${roomId}`).unsubscribe()
-        subscriptions.delete(`room_${roomId}`)
+      if (subscriptions) {
+        if (subscriptions.has(`room_${roomId}`)) {
+          subscriptions.get(`room_${roomId}`).unsubscribe()
+          subscriptions.delete(`room_${roomId}`)
+        }
+        if (subscriptions.has(`player_channel_${playerId}`)) {
+          subscriptions.get(`player_channel_${playerId}`).unsubscribe()
+          subscriptions.delete(`player_channel_${playerId}`)
+        }
+        if (subscriptions.has(`matchmaking_${playerId}`)) {
+          subscriptions.get(`matchmaking_${playerId}`).unsubscribe()
+          subscriptions.delete(`matchmaking_${playerId}`)
+        }
       }
-      if (subscriptions.has(`player_channel_${playerId}`)) {
-        subscriptions.get(`player_channel_${playerId}`).unsubscribe()
-        subscriptions.delete(`player_channel_${playerId}`)
-      }
-      if (subscriptions.has(`matchmaking_${playerId}`)) {
-        subscriptions.get(`matchmaking_${playerId}`).unsubscribe()
-        subscriptions.delete(`matchmaking_${playerId}`)
-      }
-
-      // 重置所有状态
-      resetGame()
-      gameStatus.value = 'waiting'
-      players.value = []
-      targetText.value = ''
-      myInfo.value = null
-      opponentInfo.value = null
-      isMatching.value = false // 重置匹配状态
-      processedMessages.value.clear() // 清理消息记录
 
       // 等待一小段时间确保状态清理完成
       await new Promise(resolve => setTimeout(resolve, 100))
-
-      // 跳转回大厅
-      router.push('/game-lobby')
     } catch (error) {
       console.error('离开房间失败:', error)
       throw error
     }
+  }
+
+  // 记录比赛结果
+  const recordMatchResult = (matchData) => {
+    if (!stompClient.value?.connected) {
+      console.error('WebSocket未连接，无法记录比赛结果')
+      return
+    }
+  
+    console.log('[GameState] 记录比赛结果:', matchData)
+    stompClient.value.publish({
+      destination: `/app/room/${roomId}/record`,
+      body: JSON.stringify(matchData)
+    })
   }
 
   return {
@@ -350,10 +378,9 @@ export function useGameState(roomId, stompClient) {
     playerId,
     isHost,
     isRoomFull,
-    opponentInfo,
-    myInfo,       
-    resetGame,
-    toggleGameStatus,
+    isMatching,
+    opponentInfo: playerStats.opponentInfo,
+    myInfo: playerStats.myInfo,
     startGame,
     handlePlayerJoin,
     handlePlayerLeave,
@@ -361,7 +388,8 @@ export function useGameState(roomId, stompClient) {
     toggleReady,
     requestRoomInfo,
     finishGame,
+    joinRoom,
     leaveRoom,
-    isMatching
+    recordMatchResult
   }
 }
