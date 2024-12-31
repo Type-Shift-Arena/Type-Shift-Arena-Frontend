@@ -87,6 +87,8 @@
 </template>
 
 <script setup>
+import { getLanguageLabel, getCategoryLabel, getDifficultyLabel } from '@/utils/labelUtils'
+
 defineProps({
   room: {
     type: Object,
@@ -95,34 +97,6 @@ defineProps({
 })
 
 defineEmits(['join'])
-
-// 标签转换函数
-const getLanguageLabel = (language) => {
-  const labels = {
-    'CHINESE': '中文',
-    'ENGLISH': '英文'
-  }
-  return labels[language] || language
-}
-
-const getCategoryLabel = (category) => {
-  const labels = {
-    'DAILY_CHAT': '日常对话',
-    'PROGRAMMING': '编程',
-    'BUSINESS': '商务会话',
-    'LITERATURE': '文学作品'
-  }
-  return labels[category] || category
-}
-
-const getDifficultyLabel = (difficulty) => {
-  const labels = {
-    'EASY': '简单',
-    'MEDIUM': '中等',
-    'HARD': '困难'
-  }
-  return labels[difficulty] || difficulty
-}
 </script>
 
 <style scoped>
