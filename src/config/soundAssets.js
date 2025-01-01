@@ -1,3 +1,7 @@
+/*
+ * @Author: hiddenSharp429 z404878860@163.com
+ * @Date: 2024-12-01 16:54:04
+ */
 /**
  * 打字音效配置
  * @typedef {Object} SoundrItem
@@ -21,5 +25,10 @@ export const SOUND_ASSETS = {
     id: 'mahjong',
     name: '麻将',
     path: '/sounds/mahjong.mp3'
+  },
+  bubble: {
+    id: 'bubble',
+    name: '泡泡破裂',
+    path: '/sounds/bubble.mp3'
   }
 };

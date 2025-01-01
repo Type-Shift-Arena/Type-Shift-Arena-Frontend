@@ -1,3 +1,7 @@
+/*
+ * @Author: hiddenSharp429 z404878860@163.com
+ * @Date: 2024-12-25 05:39:56
+ */
 /**
  * 导航菜单配置
  * @typedef {Object} NavigatorItem
@@ -31,6 +35,12 @@ export const NAVIGATOR_ASSETS = {
     path: '/macth-make-lobby',
     label: '匹配大厅',
     icon: 'military_tech',
+    permisson: 'user'
+  },
+  typingPractice: {
+    path: '/typing-practice',
+    label: '个人练习',
+    icon: 'sports_soccer',
     permisson: 'user'
   }
 };
