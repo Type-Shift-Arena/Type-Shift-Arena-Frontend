@@ -1,8 +1,8 @@
 /*
  * @Author: hiddenSharp429 z404878860@163.com
  * @Date: 2024-11-03 03:11:43
- * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-03 12:30:41
+ * @LastEditors: Please set LastEditors
+ * @LastEditTime: 2025-01-01 20:53:52
  */
 import { SOUND_ASSETS } from '@/config/soundAssets'
 
@@ -17,6 +17,12 @@ class SoundManager {
 
       // 初始化音效
       this.initSounds();
+
+      // 添加泡泡破裂音效设置
+      this.burstSound = {
+        enabled: localStorage.getItem('burstSound.enabled') !== 'false',
+        volume: Number(localStorage.getItem('burstSound.volume')) || 0.5
+      }
     }
   
     // 初始化音效
@@ -93,6 +99,26 @@ class SoundManager {
     // 检查音效是否加载
     isLoading() {
       return this.loading;
+    }
+
+    // 播放泡泡破裂音效
+    playBurstSound() {
+      if (!this.burstSound.enabled) return
+      
+      const burstAudio = new Audio(SOUND_ASSETS.bubble.path)
+      burstAudio.volume = this.burstSound.volume
+      burstAudio.play().catch(err => console.error('Error playing burst sound:', err))
+    }
+
+    // 更新泡泡破裂音效设置
+    updateBurstSound(key, value) {
+      this.burstSound[key] = value
+      localStorage.setItem(`burstSound.${key}`, value.toString())
+    }
+
+    // 获取泡泡破裂音效设置
+    getBurstSound() {
+      return this.burstSound
     }
 }
   

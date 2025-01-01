@@ -27,7 +27,9 @@
       "preview": "试听",
       "scopeTitle": "匹配按钮（狙击镜）音效",
       "scopeHoverSound": "聚焦音效",
-      "scopeClickSound": "点击音效"
+      "scopeClickSound": "点击音效",
+      "burstSound": "破裂音效",
+      "bubbleBurst": "泡泡破裂音效"
     },
     "language": {
       "title": "语言设置",

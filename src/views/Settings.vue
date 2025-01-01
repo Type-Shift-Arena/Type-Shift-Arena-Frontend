@@ -81,6 +81,11 @@ const updateScopeClickSound = (key, value) => {
 const switchLanguage = (newLang) => {
   setLocale(newLang)
 }
+
+// 添加预览泡泡破裂音效的方法
+const previewBurstSound = () => {
+  soundManager.playBurstSound()
+}
 </script>
 
 <template>
@@ -227,6 +232,45 @@ const switchLanguage = (newLang) => {
                 class="preview-button"
                 @click="previewScopeClickSound"
                 :disabled="!scopeClickSound.enabled"
+              >
+                <span class="material-icons">play_circle</span>
+                {{ t('settings.sound.preview') }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 在打字音效设置后添加 -->
+        <div class="setting-group">
+          <h3>{{ t('settings.sound.burstSound') }}</h3>
+          <div class="setting-item">
+            <label class="setting-label">
+              <span class="material-icons">bubble_chart</span>
+              {{ t('settings.sound.bubbleBurst') }}
+            </label>
+            <div class="setting-controls">
+              <label class="switch">
+                <input 
+                  type="checkbox"
+                  :checked="soundManager.getBurstSound().enabled"
+                  @change="e => soundManager.updateBurstSound('enabled', e.target.checked)"
+                />
+                <span class="slider"></span>
+              </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.1"
+                :value="soundManager.getBurstSound().volume"
+                @input="e => soundManager.updateBurstSound('volume', parseFloat(e.target.value))"
+                :disabled="!soundManager.getBurstSound().enabled"
+                class="volume-slider"
+              />
+              <button 
+                class="preview-button"
+                @click="previewBurstSound"
+                :disabled="!soundManager.getBurstSound().enabled"
               >
                 <span class="material-icons">play_circle</span>
                 {{ t('settings.sound.preview') }}

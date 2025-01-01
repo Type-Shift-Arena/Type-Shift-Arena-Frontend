@@ -1,6 +1,15 @@
+<!--
+ * @Author: hiddenSharp429 z404878860@163.com
+ * @Date: 2024-12-24 21:49:22
+-->
 <template>
-  <router-view></router-view>
+  <router-view />
+  <GlobalAnimationLayer />
 </template>
+
+<script setup>
+import GlobalAnimationLayer from '@/components/common/GlobalAnimationLayer.vue'
+</script>
 
 <style>
 * {
