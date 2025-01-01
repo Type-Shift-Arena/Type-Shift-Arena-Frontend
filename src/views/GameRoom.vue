@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWebSocket } from '@/composables/useWebSocket'
 import { useGameState } from '@/composables/useGameState'
@@ -7,6 +7,7 @@ import { usePlayerStats } from '@/composables/usePlayerStats'
 import DebugPanel from '@/components/GameRoom/DebugPanel.vue'
 import StatusBar from '@/components/GameRoom/StatusBar.vue'
 import GameArea from '@/components/GameRoom/GameArea.vue'
+import GameResultDialog from '@/components/GameRoom/GameResultDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -35,22 +36,19 @@ const {
   players,
   targetText,
   isHost,
-  isRoomFull,
   startGame,
-  handlePlayerJoin,
   myInfo,
   opponentInfo,
   handleRoomInfo,
   toggleReady,
   requestRoomInfo,
-  finishGame,
-  leaveRoom
+  leaveRoom,
+  recordMatchResult
 } = useGameState(roomId, stompClient)
 
 // 玩家统计相关
 const {
   playerText,
-  myProgress,
   myStats,
   opponentStats,
   handleInput,
@@ -58,12 +56,11 @@ const {
   resetStats
 } = usePlayerStats(roomId, stompClient)
 
-// 开发环境判断
-const isDev = computed(() => import.meta.env.DEV)
-
-// 调试面板显示控制
-const showDebugPanel = ref(false)
-
+/*
+  调试面板组件
+*/
+const isDev = computed(() => import.meta.env.DEV)  // 开发环境判断
+const showDebugPanel = ref(false) // 调试面板显示控制
 // 快捷键处理
 const handleKeyboardShortcut = (event) => {
   // Ctrl + Shift + D (Windows) 或 Cmd + Shift + D (Mac)
@@ -73,10 +70,20 @@ const handleKeyboardShortcut = (event) => {
   }
 }
 
-// 倒计时状态
+/*
+  倒计时状态
+*/
 const countdown = ref(3)
 const showCountdown = ref(false)
 const gameEvents = ref([]) // 用于记录游戏事件
+
+/*
+  游戏结果对话框
+*/
+const showGameResult = ref(false)
+const matchResult = ref(null)
+const oldScore = ref(null)
+const scoreChange = ref(null)
 
 // 添加事件记录函数
 const logGameEvent = (event) => {
@@ -133,7 +140,9 @@ onMounted(async () => {
   })
 
   // 监听游戏开始事件
-  window.addEventListener('game-start', () => {
+  window.addEventListener('game-start', (event) => {
+    // 保存游戏开始时间
+    localStorage.setItem('startTime', event.detail.startTime)
     showCountdown.value = true
     countdown.value = 3
     
@@ -143,7 +152,6 @@ onMounted(async () => {
       if (countdown.value <= 0) {
         clearInterval(timer)
         showCountdown.value = false
-        gameStatus.value = 'playing'
         // 重置游戏统计
         resetStats()
       }
@@ -152,11 +160,11 @@ onMounted(async () => {
 
   // 监听游戏进度事件
   window.addEventListener('game-progress', (event) => {
-    const { playerId, percentage, stats } = event.detail
+    const { playerId, stats } = event.detail
     // 如果不是自己的进度，则更新对手状态
     if (playerId !== localStorage.getItem('userId')) {
       updateOpponentStats({
-        progress: percentage,
+        progress: stats.progress,
         wpm: stats.wpm,
         accuracy: stats.accuracy,
         errorCount: stats.errorCount,
@@ -165,19 +173,44 @@ onMounted(async () => {
     }
   })
 
-  // 添加游戏结束事件监听
+  // 监听游戏结束事件
   window.addEventListener('game-finish', (event) => {
     const { winnerId } = event.detail
-    gameStatus.value = 'finished'
     
-    // 可以在这里添加显示获胜者信息的逻辑
+    // 获胜者发送比赛结果
     if (winnerId === localStorage.getItem('userId')) {
-      // 显示胜利信息
-      logGameEvent('你赢了！')
+      // 准备比赛记录数据
+      const roomOptions = JSON.parse(localStorage.getItem('roomOptions')) // 从localStorage中获取匹配选项
+      const startTime = localStorage.getItem('startTime')
+      const endTime = Date.now()
+      const matchData = {
+        roomId: roomId,
+        player1Id: myInfo.value?.id,
+        player2Id: opponentInfo.value?.id,
+        winnerId: winnerId,
+        language: roomOptions.language,
+        category: roomOptions.category,
+        difficulty: roomOptions.difficulty,
+        player1Wpm: myStats.wpm,
+        player2Wpm: opponentStats.wpm,
+        player1Accuracy: myStats.accuracy,
+        player2Accuracy: opponentStats.accuracy,
+        startTime: startTime, 
+        endTime: endTime,
+        isRanked: false, // 根据实际情况设置
+        targetText: targetText.value
+      }
+      recordMatchResult(matchData)
+
     } else {
       // 显示失败信息
       logGameEvent('对手获胜！')
     }
+  })
+
+  // 监听游戏结果事件
+  window.addEventListener('game-result', (event) => {
+    handleGameResult(event.detail)
   })
 
   window.addEventListener('keydown', handleKeyboardShortcut)
@@ -186,6 +219,7 @@ onMounted(async () => {
 // 组件卸载时的清理
 onUnmounted(() => {
   console.log('[GameRoom] 组件卸载')
+  leaveRoom(subscriptions.value)
   window.removeEventListener('keydown', handleKeyboardShortcut)
   
   // 清理订阅
@@ -213,21 +247,35 @@ const handleGameInput = (event) => {
   
   // 如果完成了游戏
   if (isCompleted) {
-    gameStatus.value = 'finished'
+    gameStatus.value = 'FINISHED'
   }
 }
 
 // 处理离开房间
 const handleLeaveRoom = async () => {
   try {
-    // 先断开WebSocket连接
+    // 离开房间逻辑
+    await leaveRoom(subscriptions.value)
+   
+    // 断开WebSocket连接
     await disconnect()
-    // 然后调用离开房间逻辑
-    await leaveRoom(stompClient.value, subscriptions.value, router)
+
+    // 跳转回大厅
+    router.push('/game-lobby')
   } catch (error) {
     console.error('离开房间失败:', error)
   }
 }
+
+// 处理游戏结果
+const handleGameResult = (result) => {
+  showGameResult.value = true
+  console.log('[GameRoom] 处理游戏结果:', result)
+  matchResult.value = result.match
+  oldScore.value = result.oldScore
+  scoreChange.value = result.scoreChange
+}
+
 </script>
 
 <template>
@@ -241,11 +289,20 @@ const handleLeaveRoom = async () => {
     
     <div class="game-room-container">
       <!-- 添加房间信息 -->
-      <div v-if="isDev" class="room-info">
-        <p>房间ID: {{ roomId }}</p>
+      <div class="room-info">
+        <div class="room-id">
+          <span>房间ID:</span>
+          <span class="id-value">{{ roomId }}</span>
+        </div>
         <div class="room-controls">
-          <button @click="copyRoomUrl">复制房间链接</button>
-          <button @click="handleLeaveRoom" class="leave-btn">离开房间</button>
+          <button class="control-btn copy-btn" @click="copyRoomUrl">
+            <span class="material-icons">content_copy</span>
+            复制房间链接
+          </button>
+          <button class="control-btn leave-btn" @click="handleLeaveRoom">
+            <span class="material-icons">exit_to_app</span>
+            离开房间
+          </button>
         </div>
       </div>
     
@@ -253,7 +310,6 @@ const handleLeaveRoom = async () => {
       <!-- 状态栏 -->
       <StatusBar
         :my-stats="myStats"
-        :my-progress="myProgress"
         :opponent-stats="opponentStats"
         :players="players"
         :my-info="myInfo"
@@ -271,13 +327,15 @@ const handleLeaveRoom = async () => {
       <!-- 游戏状态 -->
       <div class="game-status" v-if="gameStatus !== 'playing'">
         {{ 
-          gameStatus === 'WAITING' ? '等待对手加入...' :
-          gameStatus === 'finished' ? '游戏结束！' : '准备开始...'
+          gameStatus === 'WAITING' ? '等待对手加入...' : '',
+          gameStatus === 'FINISHED' ? '游戏结束！' : '',
+          gameStatus === 'READY' ? '准备开始...' : '',
+          gameStatus === 'PLAYING' ? '游戏中...' : ''
         }}
       </div>
 
       <!-- 游戏控制区域 -->
-      <div class="game-controls" v-if="gameStatus === 'WAITING'">
+      <div class="game-controls" v-if="gameStatus === 'READY'">
         <!-- 房主显示开始游戏按钮 -->
         <template v-if="myInfo.isHost">
           <button 
@@ -316,12 +374,26 @@ const handleLeaveRoom = async () => {
       :game-status="gameStatus"
       v-on="handleDebugPanelEvents"
     />
+
+    <!-- 游戏结果对话框 -->
+    <GameResultDialog
+      v-if="showGameResult"
+      :visible="showGameResult"
+      :match="matchResult"
+      :old-score="oldScore"
+      :score-change="scoreChange"
+      @close="handleCloseResult"
+      @rematch="handleRematch"
+      @leaveRoom="handleLeaveRoom"
+    />
   </div>
 </template>
 
 <style scoped>
 .game-room {
   width: 100%;
+  min-height: 100vh;
+  color: #fff;
 }
 
 .game-room-container {
@@ -330,45 +402,76 @@ const handleLeaveRoom = async () => {
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem;
+  top: 20px;
 }
 
 .game-status {
   text-align: center;
   font-size: 1.5rem;
-  color: #2c3e50;
+  color: #e4e4e4;
   margin-top: 2rem;
 }
 
 .room-info {
   margin-bottom: 1rem;
-  padding: 1rem;
-  background: #f8f9fa;
+  padding: 1rem 1.5rem;
+  background: var(--secondary-dark);
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: 1px solid var(--border-color);
 }
 
-.room-info button {
+.room-id {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.id-value {
+  font-weight: 500;
+  color: var(--accent-color);
+}
+
+.room-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #42b983;
-  color: white;
+  font-size: 1rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-primary);
 }
 
-.room-info button:hover {
-  background: #3aa876;
+.copy-btn {
+  background: var(--accent-color);
+}
+
+.copy-btn:hover {
+  background: var(--accent-hover);
 }
 
 .leave-btn {
-  margin-left: 1rem;
-  background-color: brown !important;
+  background: var(--danger-color);
 }
 
 .leave-btn:hover {
-  background-color: rgb(150, 0, 0) !important;
+  background: #dc2626;
+}
+
+.material-icons {
+  font-size: 1.2rem;
 }
 
 .countdown-overlay {
@@ -377,63 +480,75 @@ const handleLeaveRoom = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
 .countdown {
   font-size: 8rem;
-  color: white;
+  color: #4f46e5;
   animation: countdownPulse 1s infinite;
-}
-
-@keyframes countdownPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+  text-shadow: 0 0 20px rgba(79, 70, 229, 0.5);
 }
 
 .game-controls {
-  margin: 2rem 0;
+  margin-top: 2rem;
   display: flex;
   justify-content: center;
+  gap: 1rem;
 }
 
 .start-game-btn,
 .ready-btn {
-  padding: 0.8rem 2rem;
-  font-size: 1.2rem;
-  border: none;
-  border-radius: 8px;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s;
 }
 
 .start-game-btn {
-  background: #42b983;
+  background: #4f46e5;
   color: white;
+  border: none;
 }
 
-.start-game-btn:disabled {
-  background: #a8d5c2;
-  cursor: not-allowed;
+.start-game-btn:hover:not(:disabled) {
+  background: #4338ca;
+  transform: translateY(-2px);
 }
 
 .ready-btn {
-  background: #e6a23c;
-  color: white;
+  background: rgba(79, 70, 229, 0.1);
+  color: #4f46e5;
+  border: 1px solid #4f46e5;
+}
+
+.ready-btn:hover:not(:disabled) {
+  background: rgba(79, 70, 229, 0.2);
+  transform: translateY(-2px);
 }
 
 .ready-btn.ready {
-  background: #42b983;
+  background: #4f46e5;
+  color: white;
 }
 
-.ready-btn:hover,
-.start-game-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+.start-game-btn:disabled,
+.ready-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes countdownPulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
 }
 </style>

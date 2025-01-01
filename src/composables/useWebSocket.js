@@ -2,10 +2,12 @@ import { ref } from 'vue'
 import { Client } from '@stomp/stompjs'
 import { useRouter } from 'vue-router'
 import { WS_URL } from '@/config'
+import { useGameState } from './useGameState'
 
 // 添加全局连接状态管理
 const globalStompClient = ref(null)
 const globalSubscriptions = ref(new Map())
+let gameState = useGameState(null, null)
 
 export function useWebSocket(roomId) {
   const router = useRouter()
@@ -366,7 +368,17 @@ export function useWebSocket(roomId) {
     const subscription = stompClient.value.subscribe(`/queue/room/${playerId}/info`, (response) => {
       const message = JSON.parse(response.body)
       console.log('[PlayerChannel] 收到房间信息:', message)
-      
+
+      // // 处理房间创建消息
+      // if (message.type == 'ROOM_CREATED') {
+      //   console.log('[PlayerChannel] 处理房间创建消息')
+      //   const roomId = message.roomId
+      //   gameState = useGameState(roomId, stompClient)
+      //   gameState.gameStatus.value = 'waiting'
+      //   console.log('[PlayerChannel] 房间创建成功:', roomId)
+      //   console.log('[PlayerChannel] 游戏状态:', gameState.gameStatus.value)
+      // }
+
       // 所有消息都通过 player-channel 事件转发给 useGameState 处理
       window.dispatchEvent(new CustomEvent('player-channel', {
         detail: message

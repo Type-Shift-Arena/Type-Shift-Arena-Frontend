@@ -1,8 +1,6 @@
   /*
   * @Author: hiddenSharp429 z404878860@163.com
   * @Date: 2024-10-28 19:51:51
- * @LastEditors: hiddenSharp429 z404878860@163.com
- * @LastEditTime: 2024-11-14 23:22:14
   */
   import { createRouter, createWebHistory } from 'vue-router'
   import Home from '@/components/Home.vue'
@@ -10,8 +8,10 @@
   import Layout from '@/layouts/Layout.vue'
   import Settings from '@/views/Settings.vue'
   import GameLobby from '@/views/GameLobby.vue'
+  import MatchmakingLobby from '@/views/MatchmakingLobby.vue'
   import GameRoom from '@/views/GameRoom.vue'
-  import Personal from '../components/Personal.vue'
+  import Personal from '@/views/Personal.vue'
+  import TypingPractice from '@/views/TypingPractice.vue'
 
   const routes = [
     {
@@ -53,8 +53,15 @@
         {
           path: 'typing-practice',
           name: 'typingPractice',
-          component: () => import('@/components/TypingPractice.vue')
-        }
+          component: TypingPractice,
+          meta: { requiresAuth: true }
+        },
+        {
+          path: 'macth-make-lobby',
+          name: 'matchMakingLobby',
+          component: MatchmakingLobby,
+          meta: { requiresAuth: true }
+        },
         // {
         //   path: 'game-lobby',
         //   name: 'gameLobby',
