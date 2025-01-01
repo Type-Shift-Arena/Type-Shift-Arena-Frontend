@@ -5,13 +5,13 @@
   import { createRouter, createWebHistory } from 'vue-router'
   import Home from '@/components/Home.vue'
   import Auth from '@/components/Auth.vue'
-  import TypingPractice from '@/components/TypingPractice.vue'
   import Layout from '@/layouts/Layout.vue'
   import Settings from '@/views/Settings.vue'
   import GameLobby from '@/views/GameLobby.vue'
   import MatchmakingLobby from '@/views/MatchmakingLobby.vue'
   import GameRoom from '@/views/GameRoom.vue'
   import Personal from '@/views/Personal.vue'
+  import TypingPractice from '@/views/TypingPractice.vue'
 
   const routes = [
     {
